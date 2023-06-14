@@ -2,7 +2,7 @@
 
 #include <polyscope/surface_mesh.h>
 
-
+#include <Core/Model.h>
 #include <Core/ModelLoader.h>
 #include <SkeletonGenerators/GrassfireDivergenceSkeleton.h>
 

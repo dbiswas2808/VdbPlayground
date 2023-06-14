@@ -1,5 +1,4 @@
 #include <Eigen/Core>
-#include <Core/Model.h>
 
 namespace VdbFields::Core {
 class Model;

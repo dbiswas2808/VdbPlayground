@@ -1,4 +1,5 @@
 #include <Core/ModelLoader.h>
+#include <Core/Model.h>
 #include <Eigen/Core>
 
 namespace VdbFields {
