@@ -16,7 +16,7 @@ set_target_properties(SkeletonGenerators PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(SkeletonGenerators
 PRIVATE
 #third-party
-OpenVDB::openvdb 
+openvdb_static
 #lib
 Core
 morphology

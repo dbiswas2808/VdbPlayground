@@ -8,6 +8,6 @@ set_property(TARGET morphology PROPERTY CXX_STANDARD 20)
 set_property(TARGET morphology PROPERTY CXX_STANDARD_REQUIRED ON)
 target_link_libraries(morphology
     PRIVATE
-        OpenVDB::openvdb
+       openvdb_static
 )
 target_include_directories(morphology PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
