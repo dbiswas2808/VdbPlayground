@@ -1,3 +1,4 @@
+#include <Core/Model.h>
 #include <Eigen/Dense>
 #include <glm/vec3.hpp>
 #include <iostream>
@@ -13,6 +14,7 @@
 #include <polyscope/volume_grid.h>
 #include <ranges>
 #include <vector>
+#include <UI/user_interface.h>
 
 namespace PolyscopeSurfaceUtil {
 struct PolyscopeMesh {
@@ -20,20 +22,18 @@ struct PolyscopeMesh {
   std::vector<Eigen::Vector3i> tris;
 };
 
-#pragma GCC optimize("O0")
-
 [[nodiscard]] PolyscopeMesh generateTestPolyscopeMeshFromVdbGrid() {
-  auto grid = Morphology::createLevelSetTestCases<openvdb::FloatGrid>(
-      20, 10.f, {}, 0.1, 100.f);
+  auto grid =
+      VdbFields::Morphology::createLevelSetTestCases<openvdb::FloatGrid>(
+          20, 10.f, {}, 0.1, 100.f);
 
   auto gradGrid = openvdb::tools::gradient(*grid);
-  auto avgFluxProcessor = Morphology::MeanFluxProcessor{*gradGrid};
+  auto avgFluxProcessor = VdbFields::Morphology::MeanFluxProcessor{*gradGrid};
   auto outGrid = avgFluxProcessor.process();
 
   std::vector<openvdb::Vec3s> vertices;
   std::vector<openvdb::Vec3I> tris;
   std::vector<openvdb::Vec4I> quads;
-
   openvdb::tools::volumeToMesh(*outGrid, vertices, tris, quads, 0.05);
   PolyscopeMesh mesh;
   std::ranges::copy(vertices |
@@ -57,16 +57,19 @@ struct PolyscopeMesh {
 } // namespace PolyscopeSurfaceUtil
 
 int main(int, char **) {
-  polyscope::view::moveScale = 10.0;
-  polyscope::view::projectionMode = polyscope::ProjectionMode::Orthographic;
-  polyscope::options::programName = "Geometry processor";
-  polyscope::init();
+  // polyscope::view::moveScale = 10.0;
+  // polyscope::view::projectionMode = polyscope::ProjectionMode::Orthographic;
+  // polyscope::options::programName = "Geometry processor";
+  // polyscope::init();
 
-  auto polyMesh = PolyscopeSurfaceUtil::generateTestPolyscopeMeshFromVdbGrid();
-  auto *surfaceMesh = polyscope::registerSurfaceMesh(
-      "my points", polyMesh.points, polyMesh.tris);
-  auto *volumeGrid = polyscope::registerVolumeGrid(
-      "Grid mesh", 0.5, glm::vec3(0, 0, 0), glm::vec3(5., 5., 5.));
+  // auto polyMesh = PolyscopeSurfaceUtil::generateTestPolyscopeMeshFromVdbGrid();
+  // auto *surfaceMesh = polyscope::registerSurfaceMesh(
+  //     "my points", polyMesh.points, polyMesh.tris);
+  // auto *volumeGrid = polyscope::registerVolumeGrid(
+  //     "Grid mesh", 0.5, glm::vec3(0, 0, 0), glm::vec3(5., 5., 5.));
 
-  polyscope::show();
+  // polyscope::show();
+
+  VdbFields::UI::UserInterface::instance().testSkeletonize();
+  VdbFields::UI::UserInterface::instance().display();
 }
