@@ -11,7 +11,7 @@ set_target_properties(Core PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(
     Core
-    PRIVATE
+    PUBLIC
     Eigen3::Eigen
 )
 

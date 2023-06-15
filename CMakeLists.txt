@@ -4,11 +4,9 @@ project(VDBFields VERSION 0.1.0)
 include(CTest)
 enable_testing()
 
-include(${CMAKE_SOURCE_DIR}/conan/conanbuildinfo.cmake)
-conan_basic_setup()
 
 # Include Conan
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/conan/")
+include (cmake/modules/SetupConan.cmake)
 
 # Enable ccache for caching compilation results
 find_program(CCACHE_FOUND ccache)
