@@ -7,14 +7,12 @@ enable_testing()
 include(./conanbuildinfo.cmake)
 conan_basic_setup()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/")
-list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/cmake/OpenVDB")
 
-# Find all conan packages
-find_package(Eigen3 REQUIRED)
-find_package(Boost REQUIRED)
-find_package(jemalloc REQUIRED)
-find_package(TBB REQUIRED)
-# find_package(OpenVDB REQUIRED)
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache) # Less useful to do it for linking, see edit2
+endif(CCACHE_FOUND)
 
 # Define main target app VDBFields
 add_executable(VDBFields main.cpp)
@@ -33,16 +31,8 @@ add_subdirectory(lib)
 add_subdirectory(application)
 target_link_libraries(VDBFields 
     PUBLIC 
-    Eigen3::Eigen 
-    Boost::boost 
-    TBB::tbb 
-    openvdb_static
-    polyscope 
-    # application 
-    morphology 
-    Core
     UI
-    )
+)
 
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
