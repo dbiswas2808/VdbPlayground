@@ -8,6 +8,7 @@ include(./conanbuildinfo.cmake)
 conan_basic_setup()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+# Enable ccache for caching compilation results
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
     set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
@@ -19,12 +20,11 @@ add_executable(VDBFields main.cpp)
 
 set(LINKER_LANG CXX)
 set(CMAKE_PROJECT_VDBFields_LINKER_LANG CXX)
+
 # cpp CXX standard
-# set_target_properties(VDBFields PROPERTIES LINKER_LANGUAGE CXX)
 set_property(TARGET VDBFields PROPERTY CXX_STANDARD 20)
 set_property(TARGET VDBFields PROPERTY CXX_STANDARD_REQUIRED ON)
 
-# Link the conan libraries to your executable
 # Link submodules and other third party libs
 add_subdirectory(vendor)
 add_subdirectory(lib)
