@@ -9,8 +9,6 @@ add_library(Core
     Core/ModelLoader.cpp)
 set_target_properties(Core PROPERTIES LINKER_LANGUAGE CXX)
 
-find_package(Eigen3 REQUIRED)
-
 target_link_libraries(
     Core
     PRIVATE

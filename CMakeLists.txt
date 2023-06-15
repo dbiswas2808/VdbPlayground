@@ -4,9 +4,11 @@ project(VDBFields VERSION 0.1.0)
 include(CTest)
 enable_testing()
 
-include(./conanbuildinfo.cmake)
+include(${CMAKE_SOURCE_DIR}/conan/conanbuildinfo.cmake)
 conan_basic_setup()
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+# Include Conan
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/conan/")
 
 # Enable ccache for caching compilation results
 find_program(CCACHE_FOUND ccache)
@@ -14,6 +16,8 @@ if(CCACHE_FOUND)
     set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
 endif(CCACHE_FOUND)
+
+find_package(Eigen3)
 
 # Define main target app VDBFields
 add_executable(VDBFields main.cpp)
