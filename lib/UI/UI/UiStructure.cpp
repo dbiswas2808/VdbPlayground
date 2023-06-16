@@ -1,4 +1,4 @@
-#include <UI/ui_structure.h>
+#include <UI/UiStructure.h>
 #include <polyscope/polyscope.h>
 
 namespace VdbFields {

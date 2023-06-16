@@ -1,4 +1,4 @@
-#include <UI/user_interface.h>
+#include <UI/UserInterface.h>
 
 int main(int, char **) {
   VdbFields::UI::UserInterface::instance().testSkeletonize();

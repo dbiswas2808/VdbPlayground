@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.12.0)
 
 add_library(UI 
-    UI/user_interface.h
-    UI/ui_structure.h
-    UI/user_interface.cpp
-    UI/ui_structure.cpp
+    UI/UserInterface.h
+    UI/UiStructure.h
+    UI/UserInterface.cpp
+    UI/UiStructure.cpp
 )
 
 target_link_libraries(UI

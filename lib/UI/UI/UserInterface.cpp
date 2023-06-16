@@ -1,4 +1,4 @@
-#include <UI/user_interface.h>
+#include <UI/UserInterface.h>
 
 #include <polyscope/surface_mesh.h>
 
