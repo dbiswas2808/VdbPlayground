@@ -8,7 +8,7 @@
 #include <openvdb/tools/VolumeToMesh.h>
 
 #include <Core/Model.h>
-#include <morphology/mean_flux.h>
+#include <Morphology/MeanFlux.h>
 
 namespace VdbFields {
 Core::Mesh
