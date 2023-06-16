@@ -1,1 +1,1 @@
-#WIP
+![Alt Text](./images/Icosahedron.jpg)

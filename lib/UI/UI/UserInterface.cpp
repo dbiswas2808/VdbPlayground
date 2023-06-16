@@ -1,5 +1,6 @@
 #include <UI/UserInterface.h>
 
+#include <filesystem>
 #include <polyscope/surface_mesh.h>
 
 #include <Core/Model.h>
@@ -12,6 +13,7 @@ UserInterface::UserInterface() {
   polyscope::view::moveScale = 10.0;
   polyscope::view::projectionMode = polyscope::ProjectionMode::Orthographic;
   polyscope::options::programName = "Geometry processor";
+  polyscope::options::screenshotExtension = std::filesystem::current_path();
   polyscope::init();
 }
 
