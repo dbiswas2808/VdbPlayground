@@ -1,7 +1,6 @@
 # OpenVDB Level Sets
 
 
-## Skeletonization
-
+## Skeletonization from distance transform divergence
 ### Icosahedron skeleton
 ![Alt Text](./images/Icosahedron.jpg)
