@@ -1,42 +1,41 @@
-cmake_minimum_required(VERSION 3.12.0)
-project(VDBFields VERSION 0.1.0)
+cmake_minimum_required ( VERSION 3.12.0 )
+project ( VDBFields VERSION 0.1.0 )
 
-include(CTest)
-enable_testing()
-
+include ( CTest )
+enable_testing ()
 
 # Include Conan
-include (cmake/modules/SetupConan.cmake)
+include ( cmake/modules/SetupConan.cmake )
 
 # Enable ccache for caching compilation results
-find_program(CCACHE_FOUND ccache)
-if(CCACHE_FOUND)
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
-endif(CCACHE_FOUND)
+find_program ( CCACHE_FOUND ccache )
 
-find_package(Eigen3)
+if ( CCACHE_FOUND )
+    set ( CMAKE_C_COMPILER_LAUNCHER ${CCACHE} )
+    set ( CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE} )
+endif ( CCACHE_FOUND )
+
+find_package ( Eigen3 )
 
 # Define main target app VDBFields
-add_executable(VDBFields main.cpp)
+add_executable ( VDBFields main.cpp )
 
-set(LINKER_LANG CXX)
-set(CMAKE_PROJECT_VDBFields_LINKER_LANG CXX)
+set ( LINKER_LANG CXX )
+set ( CMAKE_PROJECT_VDBFields_LINKER_LANG CXX )
 
 # cpp CXX standard
-set_property(TARGET VDBFields PROPERTY CXX_STANDARD 20)
-set_property(TARGET VDBFields PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property ( TARGET VDBFields PROPERTY CXX_STANDARD 20 )
+set_property ( TARGET VDBFields PROPERTY CXX_STANDARD_REQUIRED ON )
 
 # Link submodules and other third party libs
-add_subdirectory(vendor)
-add_subdirectory(lib)
-add_subdirectory(application)
-target_link_libraries(VDBFields 
-    PUBLIC 
+add_subdirectory ( vendor )
+add_subdirectory ( lib )
+add_subdirectory ( application )
+target_link_libraries ( VDBFields
+    PUBLIC
     UI
 )
 
-
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-include(CPack)
+set ( CPACK_PROJECT_NAME ${PROJECT_NAME} )
+set ( CPACK_PROJECT_VERSION ${PROJECT_VERSION} )
+include ( CPack )

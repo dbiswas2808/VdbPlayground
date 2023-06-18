@@ -8,8 +8,9 @@ add_library(UI
 )
 
 target_link_libraries(UI
-PRIVATE
+PUBLIC
 polyscope
+PRIVATE
 SkeletonGenerators
 Core
 )
