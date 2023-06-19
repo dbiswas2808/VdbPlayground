@@ -2,10 +2,12 @@
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/GridOperators.h>
 #include <openvdb/tools/MeshToVolume.h>
+#include <fstream>
 
 #include <ranges>
 
-namespace VdbFields::Morphology {
+namespace VdbFields { 
+namespace Morphology {
 using namespace openvdb;
 
 /// @brief Flux numerical scheme type. MeanFluxOp is specialized on these values
@@ -96,25 +98,37 @@ class MeanFluxProcessor {
     const MaskGridType *m_Mask;
 };
 
+/// @brief Calculates the average flux given boundary normals given a grid with a vector field
+template <typename MapType, typename Accessor, typename ArrayT>
+auto averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord& ijk,
+                 const ArrayT &boundaryNeighborNormals);
+
+
+/// FUNTION DEFINITIONS:
+/// @brief Helper function definitions
 namespace {
 template <Coord::Int32 halfSize>
-constexpr size_t numNeigborPoints() {
-    constexpr size_t numPointsPerSide = 2 * halfSize + 1;
-
-    return numPointsPerSide * numPointsPerSide * numPointsPerSide - 1;
+constexpr size_t numBoundaryPoints() {
+    if constexpr (halfSize == 0) {
+        return 0;
+    } else {
+        constexpr size_t numPointsPerSide = 2 * halfSize + 1;
+        return numPointsPerSide * numPointsPerSide * numPointsPerSide - 1 -
+               numBoundaryPoints<halfSize - 1>();
+    }
 }
 
 /// @brief Computes the non unit neighbor normals relative to a center coordinate
 /// @tparam halfSize Half-size of a side length of the cubic domain
-/// @return 
+/// @return
 template <Coord::Int32 halfSize>
-[[nodiscard]] constexpr std::array<Coord, numNeigborPoints<halfSize>()> neighborNormals() {
+[[nodiscard]] constexpr std::array<Coord, numBoundaryPoints<halfSize>()> boundaryNeighorNormals() {
     size_t arrayIdx = 0;
-    std::array<Coord, numNeigborPoints<halfSize>()> result;
+    std::array<Coord, numBoundaryPoints<halfSize>()> result;
     for (Coord::Int32 ii = -halfSize; ii <= halfSize; ++ii) {
         for (Coord::Int32 jj = -halfSize; jj <= halfSize; ++jj) {
             for (Coord::Int32 kk = -halfSize; kk <= halfSize; ++kk) {
-                if (not(ii == 0 && jj == 0 && kk == 0)) {
+                if ((abs(ii) == halfSize || abs(jj) == halfSize || abs(kk) == halfSize)) {
                     result[arrayIdx++] = Coord(ii, jj, kk);
                 }
             }
@@ -131,15 +145,23 @@ auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_26>::averageFlux(const MapType
                                                                    const Accessor &gAcc,
                                                                    const Coord &ijk) {
     using ValueType = typename Accessor::ValueType::ValueType;
-    auto neighbor26Normals = neighborNormals<1>();
-
-    const auto fluxes =
-        neighbor26Normals | std::views::transform([mapType, gAcc, ijk](const Coord &nonUnitNormal) {
-            return mapType.applyIJT(nonUnitNormal.asVec3d().unit())
-                .dot(gAcc.getValue(
-                    ijk + Coord(2 * nonUnitNormal[0], 2 * nonUnitNormal[1], 2 * nonUnitNormal[2])));
-        });
-
-    return std::accumulate(fluxes.begin(), fluxes.end(), ValueType(0.)) / fluxes.size();
+    auto boundaryNeighborNormals = boundaryNeighorNormals<2>();
+    return Morphology::averageFlux(mapType, gAcc, ijk, boundaryNeighborNormals);
 }
-}  // namespace VdbFields::Morphology
+}  // namespace Morphology
+
+template <typename MapType, typename Accessor, typename ArrayT>
+auto Morphology::averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord &ijk,
+                             const ArrayT &boundaryNeighborNormals) {
+    using ValueType = typename Accessor::ValueType::ValueType;
+    const auto fluxes = boundaryNeighborNormals |
+                        std::views::transform([mapType, gAcc, ijk](const Coord &nonUnitNormal) {
+                            return mapType.applyIJT(nonUnitNormal.asVec3d().unit())
+                                .dot(gAcc.getValue(ijk + Coord(nonUnitNormal[0], nonUnitNormal[1],
+                                                               nonUnitNormal[2])));
+                        });
+
+    return std::accumulate(fluxes.begin(), fluxes.end(), ValueType(0.)) /
+           boundaryNeighborNormals.size();
+}
+}  // namespace VdbFields
