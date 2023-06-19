@@ -11,4 +11,5 @@ Currently Implements:
 ## Skeletonization
 ### From distance transform divergence
 #### Icosahedron skeleton
-![Alt Text](./images/Icosahedron.jpg)
+![Mean flux scheme: NEIGHBOR_26](./images/Icosahedron_neighbor_26.png)
+![Mean flux scheme: NEIGHBOR_98](./images/Icosahedron_neighbor_98.png)
