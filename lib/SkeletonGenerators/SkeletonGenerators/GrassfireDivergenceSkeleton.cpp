@@ -12,6 +12,7 @@ namespace VdbFields {
 Core::Mesh SkeletonGenerators::grassfireDivergenceSkeleton(const Core::Mesh &mesh,
                                                            float voxelSize) {
     using namespace openvdb;
+    using namespace VdbFields::Morphology;
 
     auto txForm = math::Transform::createLinearTransform(voxelSize);
 
@@ -37,7 +38,7 @@ Core::Mesh SkeletonGenerators::grassfireDivergenceSkeleton(const Core::Mesh &mes
         tools::meshToSignedDistanceField<FloatGrid>(*txForm, vertices, tris, quads, 3.0f, 100.0f);
 
     auto gradGrid = tools::gradient(*signedField);
-    auto avgFluxProcessor = VdbFields::Morphology::MeanFluxProcessor{*gradGrid};
+    auto avgFluxProcessor = MeanFluxProcessor<Vec3fGrid, MeanFluxScheme::NEIGHBOR_98>{*gradGrid};
     auto outGrid = avgFluxProcessor.process();
 
     vertices.clear();
@@ -56,8 +57,10 @@ Core::Mesh SkeletonGenerators::grassfireDivergenceSkeleton(const Core::Mesh &mes
                       std::back_inserter(skeletonMesh.m_triFaces));
 
     for (auto qVs : quads) {
-        skeletonMesh.m_triFaces.push_back({qVs[0], qVs[1], qVs[3]});
-        skeletonMesh.m_triFaces.push_back({qVs[1], qVs[2], qVs[3]});
+        skeletonMesh.m_triFaces.push_back(
+            {static_cast<int>(qVs[0]), static_cast<int>(qVs[1]), static_cast<int>(qVs[3])});
+        skeletonMesh.m_triFaces.push_back(
+            {static_cast<int>(qVs[1]), static_cast<int>(qVs[2]), static_cast<int>(qVs[3])});
     }
 
     return skeletonMesh;

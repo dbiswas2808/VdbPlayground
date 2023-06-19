@@ -6,15 +6,11 @@
 
 #include <ranges>
 
-namespace VdbFields { 
+namespace VdbFields {
 namespace Morphology {
-using namespace openvdb;
-
 /// @brief Flux numerical scheme type. MeanFluxOp is specialized on these values
 /// for concrete implementations.
-enum class MeanFluxScheme {
-    NEIGHBOR_26
-};
+enum class MeanFluxScheme { NEIGHBOR_26, NEIGHBOR_98 };
 
 /// @brief Declaration for MeanFluxOp template. Should be specialized for every
 /// new flux scheme.
@@ -26,26 +22,34 @@ struct MeanFluxOp;
 template <class MapType>
 struct MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_26> {
     template <class Accessor>
-    [[nodiscrad]] static auto averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord &ijk);
+    [[nodiscrad]] static auto averageFlux(const MapType &mapType, const Accessor &gAcc,
+                                          const openvdb::Coord &ijk);
+};
+
+template <class MapType>
+struct MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_98> {
+    template <class Accessor>
+    [[nodiscrad]] static auto averageFlux(const MapType &mapType, const Accessor &gAcc,
+                                          const openvdb::Coord &ijk);
 };
 
 using namespace openvdb::math;
 template <class MapType, MeanFluxScheme fluxScheme>
 struct MeanFluxCalculator {
     template <class Accessor>
-    static auto compute(const MapType &map, const Accessor &grid, const Coord &ijk) {
+    static auto compute(const MapType &map, const Accessor &grid, const openvdb::Coord &ijk) {
         return MeanFluxOp<MapType, fluxScheme>::averageFlux(map, grid, ijk);
     }
 
     template <class Accessor>
-    static auto result(const MapType &map, const Accessor &grid, const Coord &ijk) {
+    static auto result(const MapType &map, const Accessor &grid, const openvdb::Coord &ijk) {
         return compute(map, grid, ijk);
     }
 };
 
 template <class GridT, MeanFluxScheme scheme = MeanFluxScheme::NEIGHBOR_26,
-          class OutSacalarGridT = typename tools::VectorToScalarConverter<GridT>::Type,
-          class MaskGridType = typename tools::gridop::ToMaskGrid<GridT>::Type,
+          class OutSacalarGridT = typename openvdb::tools::VectorToScalarConverter<GridT>::Type,
+          class MaskGridType = typename openvdb::tools::gridop::ToMaskGrid<GridT>::Type,
           class InterruptT = openvdb::util::NullInterrupter>
 class MeanFluxProcessor {
    public:
@@ -100,14 +104,13 @@ class MeanFluxProcessor {
 
 /// @brief Calculates the average flux given boundary normals given a grid with a vector field
 template <typename MapType, typename Accessor, typename ArrayT>
-auto averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord& ijk,
+auto averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord &ijk,
                  const ArrayT &boundaryNeighborNormals);
-
 
 /// FUNTION DEFINITIONS:
 /// @brief Helper function definitions
 namespace {
-template <Coord::Int32 halfSize>
+template <openvdb::Coord::Int32 halfSize>
 constexpr size_t numBoundaryPoints() {
     if constexpr (halfSize == 0) {
         return 0;
@@ -121,8 +124,10 @@ constexpr size_t numBoundaryPoints() {
 /// @brief Computes the non unit neighbor normals relative to a center coordinate
 /// @tparam halfSize Half-size of a side length of the cubic domain
 /// @return
-template <Coord::Int32 halfSize>
-[[nodiscard]] constexpr std::array<Coord, numBoundaryPoints<halfSize>()> boundaryNeighorNormals() {
+template <openvdb::Coord::Int32 halfSize>
+[[nodiscard]] constexpr std::array<openvdb::Coord, numBoundaryPoints<halfSize>()>
+boundaryNeighorNormals() {
+    using openvdb::Coord;
     size_t arrayIdx = 0;
     std::array<Coord, numBoundaryPoints<halfSize>()> result;
     for (Coord::Int32 ii = -halfSize; ii <= halfSize; ++ii) {
@@ -143,7 +148,17 @@ template <class MapType>
 template <class Accessor>
 auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_26>::averageFlux(const MapType &mapType,
                                                                    const Accessor &gAcc,
-                                                                   const Coord &ijk) {
+                                                                   const openvdb::Coord &ijk) {
+    using ValueType = typename Accessor::ValueType::ValueType;
+    auto boundaryNeighborNormals = boundaryNeighorNormals<1>();
+    return Morphology::averageFlux(mapType, gAcc, ijk, boundaryNeighborNormals);
+}
+
+template <class MapType>
+template <class Accessor>
+auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_98>::averageFlux(const MapType &mapType,
+                                                                   const Accessor &gAcc,
+                                                                   const openvdb::Coord &ijk) {
     using ValueType = typename Accessor::ValueType::ValueType;
     auto boundaryNeighborNormals = boundaryNeighorNormals<2>();
     return Morphology::averageFlux(mapType, gAcc, ijk, boundaryNeighborNormals);
@@ -151,9 +166,10 @@ auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_26>::averageFlux(const MapType
 }  // namespace Morphology
 
 template <typename MapType, typename Accessor, typename ArrayT>
-auto Morphology::averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord &ijk,
-                             const ArrayT &boundaryNeighborNormals) {
+auto Morphology::averageFlux(const MapType &mapType, const Accessor &gAcc,
+                             const openvdb::Coord &ijk, const ArrayT &boundaryNeighborNormals) {
     using ValueType = typename Accessor::ValueType::ValueType;
+    using openvdb::Coord;
     const auto fluxes = boundaryNeighborNormals |
                         std::views::transform([mapType, gAcc, ijk](const Coord &nonUnitNormal) {
                             return mapType.applyIJT(nonUnitNormal.asVec3d().unit())
