@@ -109,7 +109,7 @@ auto averageFlux(const MapType &mapType, const Accessor &gAcc, const Coord &ijk,
 
 /// FUNTION DEFINITIONS:
 /// @brief Helper function definitions
-namespace {
+namespace detail {
 template <openvdb::Coord::Int32 halfSize>
 constexpr size_t numBoundaryPoints() {
     if constexpr (halfSize == 0) {
@@ -150,7 +150,7 @@ auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_26>::averageFlux(const MapType
                                                                    const Accessor &gAcc,
                                                                    const openvdb::Coord &ijk) {
     using ValueType = typename Accessor::ValueType::ValueType;
-    auto boundaryNeighborNormals = boundaryNeighorNormals<1>();
+    auto boundaryNeighborNormals = detail::boundaryNeighorNormals<1>();
     return Morphology::averageFlux(mapType, gAcc, ijk, boundaryNeighborNormals);
 }
 
@@ -160,7 +160,7 @@ auto MeanFluxOp<MapType, MeanFluxScheme::NEIGHBOR_98>::averageFlux(const MapType
                                                                    const Accessor &gAcc,
                                                                    const openvdb::Coord &ijk) {
     using ValueType = typename Accessor::ValueType::ValueType;
-    auto boundaryNeighborNormals = boundaryNeighorNormals<2>();
+    auto boundaryNeighborNormals = detail::boundaryNeighorNormals<2>();
     return Morphology::averageFlux(mapType, gAcc, ijk, boundaryNeighborNormals);
 }
 }  // namespace Morphology
