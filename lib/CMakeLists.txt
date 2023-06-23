@@ -1,5 +1,6 @@
 cmake_minimum_required ( VERSION 3.12.0 )
 
+add_subdirectory ( LevelSetOperators )
 add_subdirectory ( Core )
 add_subdirectory ( Morphology )
 add_subdirectory ( SkeletonGenerators )

@@ -1,10 +1,14 @@
-#include <Core/Model.h>
-#include <Morphology/MeanFlux.h>
 #include <SkeletonGenerators/GrassfireDivergenceSkeleton.h>
+
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/LevelSetUtil.h>
 #include <openvdb/tools/MeshToVolume.h>
 #include <openvdb/tools/VolumeToMesh.h>
+
+#include <ranges>
+
+#include <Core/Model.h>
+#include <Morphology/MeanFlux.h>
 
 #include <ranges>
 
@@ -38,7 +42,7 @@ Core::Mesh SkeletonGenerators::grassfireDivergenceSkeleton(const Core::Mesh &mes
         tools::meshToSignedDistanceField<FloatGrid>(*txForm, vertices, tris, quads, 3.0f, 100.0f);
 
     auto gradGrid = tools::gradient(*signedField);
-    auto avgFluxProcessor = MeanFluxProcessor<Vec3fGrid, MeanFluxScheme::NEIGHBOR_98>{*gradGrid};
+    auto avgFluxProcessor = MeanFluxProcessor<Vec3fGrid, LevelSetOperators::MeanFluxScheme::neighbor98>{*gradGrid};
     auto outGrid = avgFluxProcessor.process();
 
     vertices.clear();

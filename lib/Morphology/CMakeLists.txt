@@ -9,5 +9,7 @@ set_property ( TARGET Morphology PROPERTY CXX_STANDARD_REQUIRED ON )
 target_link_libraries ( Morphology
     PRIVATE
     openvdb_static
+    PUBLIC
+    LevelSetOperators
 )
 target_include_directories ( Morphology PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/" )
