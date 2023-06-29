@@ -1,0 +1,6 @@
+[submodule "vendor/openvdb"]
+	path = vendor/openvdb
+	url = https://github.com/AcademySoftwareFoundation/openvdb
+[submodule "vendor/polyscope/polyscope"]
+	path = vendor/polyscope/polyscope
+	url = git@github.com:dbiswas2808/polyscope.git
