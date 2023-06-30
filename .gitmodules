@@ -4,3 +4,6 @@
 [submodule "vendor/polyscope/polyscope"]
 	path = vendor/polyscope/polyscope
 	url = git@github.com:dbiswas2808/polyscope.git
+[submodule "vendor/ImGuiFileDialog/ImGuiFileDialog"]
+	path = vendor/ImGuiFileDialog/ImGuiFileDialog
+	url = git@github.com:aiekick/ImGuiFileDialog.git
