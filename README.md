@@ -11,11 +11,14 @@ Currently Implements:
 ## 1.1. Skeletonization
 ### 1.1.1. From distance transform divergence
 #### 1.1.1.1. Icosahedron skeleton
+![Icosahedron original](./images/Icosahedron_original.png)
+                Original
+
 ![Mean flux scheme NEIGHBOR_26](./images/Icosahedron_neighbor_26.png)
-                Mean flux scheme NEIGHBOR_26
+                With mean flux scheme NEIGHBOR_26
 
 ![Mean flux scheme NEIGHBOR_98](./images/Icosahedron_neighbor_98.png)
-                Mean flux scheme NEIGHBOR_98
+                With mean flux scheme NEIGHBOR_98
 
 #### 1.1.1.2. Wall street bull
 ![Bull_original](./images/Bull_original.png)
