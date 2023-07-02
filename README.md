@@ -17,7 +17,7 @@ Currently Implements:
 ![Mean flux scheme NEIGHBOR_98](./images/Icosahedron_neighbor_98.png)
                 Mean flux scheme NEIGHBOR_98
 
-#### 1.1.1.1. Wall street bull
+#### 1.1.1.2. Wall street bull
 ![Bull_original](./images/Bull_original.png)
              Original
 
