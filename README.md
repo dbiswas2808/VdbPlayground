@@ -12,7 +12,11 @@ Currently Implements:
 ### From distance transform divergence
 #### Icosahedron skeleton
 ![Mean flux scheme NEIGHBOR_26](./images/Icosahedron_neighbor_26.png)
-    Mean flux scheme NEIGHBOR_26
+                Mean flux scheme NEIGHBOR_26
 
 ![Mean flux scheme NEIGHBOR_98](./images/Icosahedron_neighbor_98.png)
-    Mean flux scheme NEIGHBOR_98
+                Mean flux scheme NEIGHBOR_98
+
+![Buull_original](./images/Bull_original.png) ![Bull skeleton](./images/Bull_Skeleton_98.png)
+             Wall street bull                       Wall street bull divergence skeleton
+    

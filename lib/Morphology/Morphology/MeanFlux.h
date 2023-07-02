@@ -34,7 +34,7 @@ class MeanFluxProcessor {
     MeanFluxProcessor(const GridT &grid, InterruptT *interrupt = nullptr)
         : m_InputGrid(grid), m_Interrupt(interrupt), m_Mask(nullptr) {}
 
-    MeanFluxProcessor(const GridT &grid, const MaskGridType &mask, InterruptT *interrupt = nullptr)
+    MeanFluxProcessor(const GridT &grid, const MaskGridType &mask, InterruptT *interrupt)
         : m_InputGrid(grid), m_Interrupt(interrupt), m_Mask(&mask) {}
 
     [[nodiscard]] typename OutSacalarGridT::Ptr process(bool threaded = true) {

@@ -15,7 +15,8 @@ if ( CCACHE_FOUND )
     set ( CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE} )
 endif ( CCACHE_FOUND )
 
-find_package ( Eigen3 )
+find_package ( Eigen3 REQUIRED )
+find_package ( assimp REQUIRED )
 
 # Define main target app VDBFields
 add_executable ( VDBFields main.cpp )
@@ -28,13 +29,14 @@ set_property ( TARGET VDBFields PROPERTY CXX_STANDARD 20 )
 set_property ( TARGET VDBFields PROPERTY CXX_STANDARD_REQUIRED ON )
 
 # Link submodules and other third party libs
-add_subdirectory ( vendor )
-add_subdirectory ( lib )
-add_subdirectory ( application )
 target_link_libraries ( VDBFields
     PUBLIC
     UI
 )
+
+add_subdirectory ( vendor )
+add_subdirectory ( lib )
+add_subdirectory ( application )
 
 set ( CPACK_PROJECT_NAME ${PROJECT_NAME} )
 set ( CPACK_PROJECT_VERSION ${PROJECT_VERSION} )

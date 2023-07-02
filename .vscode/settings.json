@@ -84,7 +84,8 @@
         "*.ipp": "cpp",
         "geometry": "cpp",
         "filesystem": "cpp",
-        "codecvt": "cpp"
+        "codecvt": "cpp",
+        "regex": "cpp"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc-12",
     "C_Cpp.default.cppStandard": "c++20",
@@ -101,5 +102,8 @@
     "cmake.generator": "Ninja",
     "cmake.format.allowOptionalArgumentIndentation": true,
     "cmake.format.spaceAfterCommandName": true,
-    "cmake.format.spaceInParentheses": true
+    "cmake.format.spaceInParentheses": true,
+    "editor.cursorSmoothCaretAnimation": "off",
+    "editor.fontSize": 14,
+    "C_Cpp.default.intelliSenseMode": "linux-gcc-x64"
 }

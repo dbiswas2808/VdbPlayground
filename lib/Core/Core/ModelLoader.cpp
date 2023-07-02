@@ -1,6 +1,11 @@
 #include <Core/ModelLoader.h>
-#include <Core/Model.h>
+
+#include <ranges>
 #include <Eigen/Core>
+
+#include <Core/Model.h>
+#include <MeshFileReaders/StlFileReader.h>
+
 
 namespace VdbFields {
 Core::Model Core::loadTestPolytopeMeshModel(int faceCount, double scale,

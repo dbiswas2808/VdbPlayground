@@ -13,6 +13,7 @@ class TestProject(ConanFile):
         self.requires("eigen/3.4.0")
         self.requires("boost/1.81.0")
         self.requires("jemalloc/5.3.0")
+        self.requires("assimp/5.2.2")
 
     def build(self):
         cmake = CMake(self)
