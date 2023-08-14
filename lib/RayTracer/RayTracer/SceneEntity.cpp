@@ -1,6 +1,9 @@
 #include <RayTracer/SceneEntity.h>
+
 #include <iostream>
 #include <png.h>
+
+#include <RayTracer/GeometryRayIntersector.h>
 
 namespace VdbFields::RayTracer {
 

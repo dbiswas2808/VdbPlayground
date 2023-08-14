@@ -7,6 +7,8 @@
 #include <RayTracer/Geometry.h>
 
 namespace VdbFields::RayTracer {
+struct Ray;
+
 namespace detail {
 [[nodiscard]] Eigen::Matrix3f ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg);
 }
@@ -59,12 +61,6 @@ class Sampler {
       SampleGenerator generator;
 };
 
-struct Ray {
-      Eigen::Vector3f origin_world;
-      Eigen::Vector3f direction_world;
-      Eigen::Vector2f m_minMaxT_mm;
-};
-
 struct Camera {
     explicit Camera(Eigen::Vector3f origin_camera, Eigen::Vector2i shape_px, float fov_deg,
                     Eigen::Vector2f minMaxT_mm, Eigen::Matrix4f worldFromCamera);
@@ -80,42 +76,8 @@ struct Camera {
 
 class RayTracer {};
 
-struct BRDF {};
-
-struct RayIntersect {
-      Eigen::Vector3f point_world;
-      float hitT_mm;
-};
-
-class ShapeIntersector {
-      public:
-      virtual std::optional<RayIntersect> intersect(const Ray& ray) const = 0;
-      virtual bool hasIntersection(const Ray& ray) const = 0;
-      virtual BRDF getBRDF(const RayIntersect& intersect) const = 0;
-};
-
-class SphereIntersector : public ShapeIntersector {
-   public:
-    SphereIntersector(Sphere sphere, Eigen::Matrix4f worldFromGeom)
-        : m_sphere(sphere), m_worldFromGeom(worldFromGeom) {}
-
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final { return false; } 
-    [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final { return {}; }
-
-   private:
-    Eigen::Matrix4f m_worldFromGeom;
-    Sphere m_sphere;
-};
-
 struct Material {
       Eigen::Vector3f color;
-};
-
-class GeometricPrimitive {
-      Material mat;
-      std::unique_ptr<Geometry> geometry;
-      Eigen::Matrix4f worldFromObject;
 };
 
 class AggregatePrimitive {};

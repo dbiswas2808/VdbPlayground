@@ -1,10 +1,11 @@
 #include <RayTracer/SceneEntity.h>
 #include <catch2/catch_test_macros.hpp>
 #include <RayTracer/Film.h>
+#include <RayTracer/GeometryRayIntersector.h>
 
 namespace VdbFields {
 namespace {
-class InfiniteXYPlaneIntersector : public RayTracer::ShapeIntersector {
+class InfiniteXYPlaneIntersector {
    public:
     explicit InfiniteXYPlaneIntersector(float zoffset_mm, Eigen::Matrix4f worldFromGeom)
         : m_zoffset_mm(zoffset_mm), m_worldFromGeom(worldFromGeom) {}
@@ -46,26 +47,26 @@ TEST_CASE("SceneEntity: Ray sampling") {
 }
 
 TEST_CASE("Test camera ray") {
+    using namespace RayTracer;
     auto worldFromCamera = Eigen::Matrix4f::Identity();
 
     auto screenShape = Eigen::Vector2i(250, 250);
 
-    auto camera = RayTracer::Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
+    auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                                     Eigen::Vector2f(0, std::numeric_limits<float>::infinity()),
                                     worldFromCamera);
 
-    auto sampler = RayTracer::Sampler();
+    auto sampler = Sampler();
 
-    InfiniteXYPlaneIntersector infinitePlaneIntersector(-4.f, Eigen::Matrix4f::Identity());
+    ShapeIntersector infinitePlaneIntersector = ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, Eigen::Matrix4f::Identity());
     auto rayIncrements = Eigen::Vector2f(8.f / screenShape.x(), 8.f / screenShape.y());
 
     //Sphere center
     Eigen::Vector3f sphereCenter = {0, 0, -8.f};
+    auto sphereIntersector = ShapeIntersector::fromImpl<SphereIntersector>(
+        Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, Eigen::Matrix4f::Identity());
 
-    RayTracer::SphereIntersector sphereIntersector(
-        {{}, sphereCenter, 4.f * std::sqrt(2.f)}, Eigen::Matrix4f::Identity());
-
-    RayTracer::Film film{screenShape};
+    Film film{screenShape};
     for (int i = 0; i < screenShape.prod(); ++i) {
         auto px = Eigen::Vector2i{i % screenShape[0], i / screenShape[0]};
         sampler.setPixel(px);
@@ -93,7 +94,7 @@ TEST_CASE("Test camera ray") {
                 std::abs((intersectPt->point_world - Eigen::Vector3f(0.f, 0.f, -8.f)).stableNorm() -
                          4.f * std::sqrt(2.f)) < epsilon_mm<float>);
             CHECK((proj - Eigen::Vector3f(0.f, 0.f, -4.f)).stableNorm() < 4.f);
-            film.addSample(px, Eigen::Vector3f(0.5f, 0.5f, 0));
+            film.addSample(px, Eigen::Vector3f(0.45f, 0.15f, 0.4f));
         }
     }
     film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");

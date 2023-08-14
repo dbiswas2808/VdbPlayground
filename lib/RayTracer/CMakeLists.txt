@@ -6,10 +6,12 @@ include_directories(${PNG_INCLUDE_DIRS})
 add_library(RayTracer
 RayTracer/Film.h
 RayTracer/Geometry.h
+RayTracer/GeometryRayIntersector.h
 RayTracer/Scene.h
 RayTracer/SceneEntity.h
 RayTracer/Film.cpp
 RayTracer/Geometry.cpp
+RayTracer/GeometryRayIntersector.cpp
 RayTracer/Scene.cpp
 RayTracer/SceneEntity.cpp
 )
