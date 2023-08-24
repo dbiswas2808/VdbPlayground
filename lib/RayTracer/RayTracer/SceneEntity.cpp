@@ -5,8 +5,10 @@
 
 #include <RayTracer/GeometryRayIntersector.h>
 
-namespace VdbFields::RayTracer {
 
+
+namespace VdbFields {
+namespace RayTracer {
 Eigen::Matrix3f detail::ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg) {
     auto aspectRatio = shape_px[0] / static_cast<float>(shape_px[1]);
     auto scale = std::tan(std::numbers::pi_v<float> / 180 * (fov_deg * 0.5));
@@ -34,24 +36,21 @@ Ray Camera::getRay(Eigen::Vector2f sample_px) const {
                                   (sample_camera - m_origin_camera).normalized(),
                .m_minMaxT_mm = m_minMaxT_mm};
 }
-
-std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray) const {
-    Eigen::Vector3f center_world = (m_worldFromGeom * m_sphere.center.homogeneous()).hnormalized();
-    const auto radiusSq_world = (m_sphere.radius_mm * m_sphere.radius_mm);
-
-    assert(ray.direction_world.stableNorm() - 1.0 < 1e-6);
-    const auto rayOriginToSphereCenter_world = (center_world - ray.origin_world).eval();
-    const auto proj = rayOriginToSphereCenter_world.dot(ray.direction_world);
-
-    const auto b = -2 * proj;
-    const auto c = rayOriginToSphereCenter_world.squaredNorm() - radiusSq_world;
-    const auto discriminant = b * b - 4 * c;
-    if (discriminant < 0) {
-        return std::nullopt;
-    }
-
-    auto hitT = -0.5f * (b + std::sqrt(discriminant));
-    const auto intersectionPt_world = (ray.origin_world + hitT * ray.direction_world).eval();
-    return RayIntersect{intersectionPt_world, hitT};
-}
 }  // namespace VdbFields::RayTracer
+
+[[nodiscard]] Eigen::Matrix4f RayTracer::lookAt_cameraFromWorld(Eigen::Vector3f eye_world,
+                                                                Eigen::Vector3f target_world,
+                                                                Eigen::Vector3f up_world) {
+    auto dir_world = (eye_world - target_world).stableNormalized();
+    auto right_world = up_world.cross(dir_world).stableNormalized();
+    auto newUp_world = dir_world.cross(right_world).stableNormalized();
+
+    Eigen::Matrix4f cameraFromWorld = Eigen::Matrix4f::Identity();
+    cameraFromWorld.block<1, 3>(0, 0) = right_world;
+    cameraFromWorld.block<1, 3>(1, 0) = newUp_world;
+    cameraFromWorld.block<1, 3>(2, 0) = dir_world;
+    cameraFromWorld.block<3, 1>(0, 3) = -eye_world;
+
+    return cameraFromWorld;
+}
+}  // namespace VdbFields

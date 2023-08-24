@@ -105,9 +105,9 @@ void writePngRGB(const Eigen::SparseMatrix<float>& image, std::string filename) 
 }
 
 void Film::addSample(Eigen::Vector2i pixel, Eigen::Vector3f color) {
-    m_image.coeffRef(pixel[0], 3 * pixel[1]) += color[0];
-    m_image.coeffRef(pixel[0], 3 * pixel[1] + 1) += color[1];
-    m_image.coeffRef(pixel[0], 3 * pixel[1] + 2) += color[2];
+    m_image.coeffRef(pixel[1], 3 * pixel[0]) += color[0];
+    m_image.coeffRef(pixel[1], 3 * pixel[0] + 1) += color[1];
+    m_image.coeffRef(pixel[1], 3 * pixel[0] + 2) += color[2];
 }
 
 void Film::imageToFile(std::string filename) {

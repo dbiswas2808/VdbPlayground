@@ -1,3 +1,4 @@
+#include <memory>
 #include <optional>
 #include <RayTracer/Geometry.h>
 
@@ -11,6 +12,7 @@ struct Ray {
 struct RayIntersect {
     Eigen::Vector3f point_world;
     float hitT_mm;
+    Eigen::Vector3f normal_world;
 };
 
 struct BRDF {};

@@ -61,9 +61,15 @@ class Sampler {
       SampleGenerator generator;
 };
 
+[[nodiscard]] Eigen::Matrix4f lookAt_cameraFromWorld(Eigen::Vector3f eye_world,
+                                                     Eigen::Vector3f target_world,
+                                                     Eigen::Vector3f up_world);
+
 struct Camera {
-    explicit Camera(Eigen::Vector3f origin_camera, Eigen::Vector2i shape_px, float fov_deg,
-                    Eigen::Vector2f minMaxT_mm, Eigen::Matrix4f worldFromCamera);
+    explicit Camera(Eigen::Vector3f origin_camera, 
+                           Eigen::Vector2i shape_px, float fov_deg,
+                           Eigen::Vector2f minMaxT_mm, 
+                           Eigen::Matrix4f worldFromCamera);
 
     [[nodiscard]] Ray getRay(Eigen::Vector2f sample_px) const;
 

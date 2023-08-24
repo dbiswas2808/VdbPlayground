@@ -48,20 +48,25 @@ TEST_CASE("SceneEntity: Ray sampling") {
 
 TEST_CASE("Test camera ray") {
     using namespace RayTracer;
-    auto worldFromCamera = Eigen::Matrix4f::Identity();
+    // auto worldFromCamera = Eigen::Matrix4f::Identity();
+    auto worldFromCamera = lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f),
+                                             Eigen::Vector3f(0.f, 0.f, -1.f),
+                                             Eigen::Vector3f(0.f, 1.f, 0.f)).inverse();
 
-    auto screenShape = Eigen::Vector2i(250, 250);
-
-    auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
-                                    Eigen::Vector2f(0, std::numeric_limits<float>::infinity()),
-                                    worldFromCamera);
+    auto screenShape = Eigen::Vector2i(250, 125);
+    auto camera =
+        Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
+               Eigen::Vector2f(0, std::numeric_limits<float>::infinity()), worldFromCamera);
 
     auto sampler = Sampler();
+    ShapeIntersector infinitePlaneIntersector =
+        ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, Eigen::Matrix4f::Identity());
 
-    ShapeIntersector infinitePlaneIntersector = ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, Eigen::Matrix4f::Identity());
-    auto rayIncrements = Eigen::Vector2f(8.f / screenShape.x(), 8.f / screenShape.y());
+    auto aspectRatio = static_cast<float>(screenShape[0]) / screenShape[1];
+    auto rayIncrements =
+        Eigen::Vector2f(aspectRatio * 8.f / screenShape.x(), 8.f / screenShape.y());
 
-    //Sphere center
+    // Sphere center
     Eigen::Vector3f sphereCenter = {0, 0, -8.f};
     auto sphereIntersector = ShapeIntersector::fromImpl<SphereIntersector>(
         Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, Eigen::Matrix4f::Identity());
@@ -77,11 +82,11 @@ TEST_CASE("Test camera ray") {
 
         auto ray = camera.getRay(sampler.getSample_px());
 
-        auto intersectPt =  infinitePlaneIntersector.intersect(ray);
+        auto intersectPt = infinitePlaneIntersector.intersect(ray);
         CHECKED_IF(intersectPt.has_value()) {
-            CHECK((intersectPt->point_world - Eigen::Vector3f(rayIncrements[0] * expectedSample_px[0] - 4.f,
-                                                              4.f - rayIncrements[1] * expectedSample_px[1],
-                                                              -4.f))
+            CHECK((intersectPt->point_world -
+                   Eigen::Vector3f(rayIncrements[0] * expectedSample_px[0] - aspectRatio * 4.f,
+                                   4.f - rayIncrements[1] * expectedSample_px[1], -4.f))
                       .stableNorm() < epsilon_mm<float>);
         }
 
@@ -90,11 +95,14 @@ TEST_CASE("Test camera ray") {
             Eigen::Vector3f proj = intersectPt->point_world;
             proj.z() = -4.f;
 
+            auto alpha = intersectPt->normal_world.z();
+            alpha = std::pow(alpha, 4);
+
             CHECK(
                 std::abs((intersectPt->point_world - Eigen::Vector3f(0.f, 0.f, -8.f)).stableNorm() -
                          4.f * std::sqrt(2.f)) < epsilon_mm<float>);
             CHECK((proj - Eigen::Vector3f(0.f, 0.f, -4.f)).stableNorm() < 4.f);
-            film.addSample(px, Eigen::Vector3f(0.45f, 0.15f, 0.4f));
+            film.addSample(px, alpha  * Eigen::Vector3f(0.f, 1.f, 0.f) +  (1 - alpha)  * Eigen::Vector3f(1.f, 0.f, 0.f));
         }
     }
     film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");
