@@ -19,22 +19,20 @@ Eigen::Matrix3f detail::ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg) {
 }
 
 Camera::Camera(Eigen::Vector3f origin_camera, Eigen::Vector2i shape_px, float fov_deg,
-               Eigen::Vector2f minMaxT_mm, Eigen::Matrix4f worldFromCamera)
+               Eigen::Vector2f minMaxT)
     : m_origin_camera(origin_camera),
       m_ndcFromPixel(detail::ndcFromPixel(shape_px, fov_deg)),
-      m_minMaxT_mm(minMaxT_mm),
-      m_worldFromCamera(worldFromCamera) {}
+      m_minMaxT(minMaxT) {}
 
-Ray Camera::getRay(Eigen::Vector2f sample_px) const {
+Ray Camera::getRay_camera(Eigen::Vector2f sample_px) const {
     auto sample_screen =
         (m_ndcFromPixel.block<2, 2>(0, 0) * sample_px + m_ndcFromPixel.block<2, 1>(0, 2)).eval();
     Eigen::Vector3f sample_camera;
     sample_camera << sample_screen.x(), sample_screen.y(), -1;
 
-    return Ray{.origin_world = m_worldFromCamera * m_origin_camera.homogeneous(),
-               .direction_world = m_worldFromCamera.block<3, 3>(0, 0) *
-                                  (sample_camera - m_origin_camera).normalized(),
-               .m_minMaxT_mm = m_minMaxT_mm};
+    return Ray{.origin = m_origin_camera,
+               .direction = (sample_camera - m_origin_camera).normalized(),
+               .m_minMaxT = m_minMaxT};
 }
 }  // namespace VdbFields::RayTracer
 

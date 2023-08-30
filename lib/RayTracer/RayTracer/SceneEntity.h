@@ -68,16 +68,14 @@ class Sampler {
 struct Camera {
     explicit Camera(Eigen::Vector3f origin_camera, 
                            Eigen::Vector2i shape_px, float fov_deg,
-                           Eigen::Vector2f minMaxT_mm, 
-                           Eigen::Matrix4f worldFromCamera);
+                           Eigen::Vector2f minMaxT_mm);
 
-    [[nodiscard]] Ray getRay(Eigen::Vector2f sample_px) const;
+    [[nodiscard]] Ray getRay_camera(Eigen::Vector2f sample_px) const;
 
    private:
     Eigen::Vector3f m_origin_camera;
-    Eigen::Vector2f m_minMaxT_mm;
+    Eigen::Vector2f m_minMaxT;
     Eigen::Matrix3f m_ndcFromPixel;
-    Eigen::MatrixX4f m_worldFromCamera;
 };
 
 class RayTracer {};

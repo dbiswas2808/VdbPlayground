@@ -4,9 +4,11 @@
 
 namespace VdbFields::RayTracer {
 struct Ray {
-    Eigen::Vector3f origin_world;
-    Eigen::Vector3f direction_world;
-    Eigen::Vector2f m_minMaxT_mm;
+    Eigen::Vector3f origin;
+    Eigen::Vector3f direction;
+    Eigen::Vector2f m_minMaxT;
+
+    [[nodiscard]] Ray transform(Eigen::Matrix4f tx) const;
 };
 
 struct RayIntersect {
@@ -34,12 +36,12 @@ class ShapeIntersector {
 
         Model(const Model& other) = delete;
 
-        [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final {
-            return m_t.intersect(ray);
+        [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const final {
+            return m_t.intersect(ray_camera);
         }
 
-        [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final {
-            return m_t.hasIntersection(ray);
+        [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const final {
+            return m_t.hasIntersection(ray_camera);
         }
 
         [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final {
@@ -66,11 +68,11 @@ class ShapeIntersector {
         : m_intersector(other.m_intersector->clone()) {}
     ShapeIntersector(ShapeIntersector&& other) : m_intersector(std::move(other.m_intersector)) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const {
-        return m_intersector->intersect(ray);
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const {
+        return m_intersector->intersect(ray_camera);
     }
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const {
-        return m_intersector->hasIntersection(ray);
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const {
+        return m_intersector->hasIntersection(ray_camera);
     }
     [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const {
         return m_intersector->getBRDF(intersect);
@@ -82,14 +84,15 @@ class ShapeIntersector {
 
 class SphereIntersector {
    public:
-    SphereIntersector(Sphere sphere, Eigen::Matrix4f worldFromGeom)
-        : m_sphere(sphere), m_worldFromGeom(worldFromGeom) {}
+    SphereIntersector(Sphere sphere, Eigen::Matrix4f worldFromCamera, Eigen::Matrix4f worldFromGeom)
+        : m_sphere(sphere), m_worldFromCamera(worldFromCamera), m_worldFromGeom(worldFromGeom) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final { return false; }
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const final;
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const final { return false; }
     [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final { return {}; }
 
    private:
+    Eigen::Matrix4f m_worldFromCamera;
     Eigen::Matrix4f m_worldFromGeom;
     Sphere m_sphere;
 };

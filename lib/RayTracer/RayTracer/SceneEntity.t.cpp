@@ -7,20 +7,31 @@ namespace VdbFields {
 namespace {
 class InfiniteXYPlaneIntersector {
    public:
-    explicit InfiniteXYPlaneIntersector(float zoffset_mm, Eigen::Matrix4f worldFromGeom)
-        : m_zoffset_mm(zoffset_mm), m_worldFromGeom(worldFromGeom) {}
+    explicit InfiniteXYPlaneIntersector(float zoffset_mm, Eigen::Matrix4f worldFromCamera,
+                                        Eigen::Matrix4f worldFromGeom)
+        : m_zoffset_mm(zoffset_mm),
+          m_worldFromCamera(worldFromCamera),
+          m_worldFromGeom(worldFromGeom) {}
 
-    [[nodiscard]] virtual std::optional<RayTracer::RayIntersect> intersect(const RayTracer::Ray& ray) const final{
+    [[nodiscard]] virtual std::optional<RayTracer::RayIntersect> intersect(
+        const RayTracer::Ray& ray_camera) const final {
+        auto ray_world = ray_camera.transform(m_worldFromCamera);
         assert(ray.direction_world.z() > epsilon_mm<float>);
-        auto hitT = (m_zoffset_mm - ray.origin_world.z()) / ray.direction_world.z();
-        const auto intersectionPt_world = (ray.origin_world + hitT * ray.direction_world).eval();
+        auto hitT = (m_zoffset_mm - ray_world.origin.z()) / ray_world.direction.z();
+        const auto intersectionPt_world = (ray_world.origin + hitT * ray_world.direction).eval();
         return RayTracer::RayIntersect{intersectionPt_world, hitT};
     }
-    [[nodiscard]] virtual bool hasIntersection(const RayTracer::Ray& ray) const final { return false; }
-    [[nodiscard]] virtual RayTracer::BRDF getBRDF(const RayTracer::RayIntersect& intersect) const final { return {}; }
+    [[nodiscard]] virtual bool hasIntersection(const RayTracer::Ray& ray) const final {
+        return false;
+    }
+    [[nodiscard]] virtual RayTracer::BRDF getBRDF(
+        const RayTracer::RayIntersect& intersect) const final {
+        return {};
+    }
 
    private:
     Eigen::Matrix4f m_worldFromGeom;
+    Eigen::Matrix4f m_worldFromCamera;
     float m_zoffset_mm;
 };
 }  // namespace
@@ -49,18 +60,18 @@ TEST_CASE("SceneEntity: Ray sampling") {
 TEST_CASE("Test camera ray") {
     using namespace RayTracer;
     // auto worldFromCamera = Eigen::Matrix4f::Identity();
-    auto worldFromCamera = lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f),
-                                             Eigen::Vector3f(0.f, 0.f, -1.f),
-                                             Eigen::Vector3f(0.f, 1.f, 0.f)).inverse();
+    Eigen::Matrix4f worldFromCamera =
+        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -1.f),
+                               Eigen::Vector3f(0.f, 1.f, 0.f))
+            .inverse();
 
     auto screenShape = Eigen::Vector2i(250, 125);
-    auto camera =
-        Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
-               Eigen::Vector2f(0, std::numeric_limits<float>::infinity()), worldFromCamera);
+    auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
+                         Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
 
     auto sampler = Sampler();
     ShapeIntersector infinitePlaneIntersector =
-        ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, Eigen::Matrix4f::Identity());
+        ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, worldFromCamera, Eigen::Matrix4f::Identity());
 
     auto aspectRatio = static_cast<float>(screenShape[0]) / screenShape[1];
     auto rayIncrements =
@@ -69,7 +80,7 @@ TEST_CASE("Test camera ray") {
     // Sphere center
     Eigen::Vector3f sphereCenter = {0, 0, -8.f};
     auto sphereIntersector = ShapeIntersector::fromImpl<SphereIntersector>(
-        Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, Eigen::Matrix4f::Identity());
+        Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, worldFromCamera, Eigen::Matrix4f::Identity());
 
     Film film{screenShape};
     for (int i = 0; i < screenShape.prod(); ++i) {
@@ -80,9 +91,9 @@ TEST_CASE("Test camera ray") {
         Eigen::Vector2f expectedSample_px = px.cast<float>() + Eigen::Vector2f({0.5f, 0.5f});
         CHECK(sampler.getSample_px() == expectedSample_px);
 
-        auto ray = camera.getRay(sampler.getSample_px());
+        auto ray_camera = camera.getRay_camera(sampler.getSample_px());
 
-        auto intersectPt = infinitePlaneIntersector.intersect(ray);
+        auto intersectPt = infinitePlaneIntersector.intersect(ray_camera);
         CHECKED_IF(intersectPt.has_value()) {
             CHECK((intersectPt->point_world -
                    Eigen::Vector3f(rayIncrements[0] * expectedSample_px[0] - aspectRatio * 4.f,
@@ -90,7 +101,7 @@ TEST_CASE("Test camera ray") {
                       .stableNorm() < epsilon_mm<float>);
         }
 
-        intersectPt = sphereIntersector.intersect(ray);
+        intersectPt = sphereIntersector.intersect(ray_camera);
         CHECKED_IF(intersectPt.has_value()) {
             Eigen::Vector3f proj = intersectPt->point_world;
             proj.z() = -4.f;
