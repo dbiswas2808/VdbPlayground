@@ -1,24 +1,10 @@
+#include <RayTracer/Geometry.h>
 #include <memory>
 #include <optional>
-#include <RayTracer/Geometry.h>
+
+#include <RayTracer/Material.h>
 
 namespace VdbFields::RayTracer {
-struct Ray {
-    Eigen::Vector3f origin;
-    Eigen::Vector3f direction;
-    Eigen::Vector2f m_minMaxT;
-
-    [[nodiscard]] Ray transform(Eigen::Matrix4f tx) const;
-};
-
-struct RayIntersect {
-    Eigen::Vector3f point_world;
-    float hitT_mm;
-    Eigen::Vector3f normal_world;
-};
-
-struct BRDF {};
-
 class ShapeIntersector {
     struct Concept {
         [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const = 0;
@@ -84,17 +70,19 @@ class ShapeIntersector {
 
 class SphereIntersector {
    public:
-    SphereIntersector(Sphere sphere, Eigen::Matrix4f worldFromCamera, Eigen::Matrix4f worldFromGeom)
+    SphereIntersector(Sphere sphere, const Eigen::Affine3f& worldFromCamera,
+                      const Eigen::Affine3f& worldFromGeom)
         : m_sphere(sphere), m_worldFromCamera(worldFromCamera), m_worldFromGeom(worldFromGeom) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const final;
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const final { return false; }
-    [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final { return {}; }
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const;
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const { return false; }
+    [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const { return m_material.getBRDF(intersect); }
 
    private:
-    Eigen::Matrix4f m_worldFromCamera;
-    Eigen::Matrix4f m_worldFromGeom;
+    Eigen::Affine3f m_worldFromCamera;
+    Eigen::Affine3f m_worldFromGeom;
     Sphere m_sphere;
+    Material m_material;
 };
 
 // class TriMeshIntersector {

@@ -1,16 +1,13 @@
 #include <memory>
 #include <numbers>
 #include <optional>
-#include <Eigen/Core>
-#include <Eigen/SparseCore>
 #include <Eigen/Geometry> 
-#include <RayTracer/Geometry.h>
 
 namespace VdbFields::RayTracer {
 struct Ray;
 
 namespace detail {
-[[nodiscard]] Eigen::Matrix3f ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg);
+[[nodiscard]] Eigen::Affine2f ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg);
 }
 
 struct DefaultSampler {
@@ -61,7 +58,7 @@ class Sampler {
       SampleGenerator generator;
 };
 
-[[nodiscard]] Eigen::Matrix4f lookAt_cameraFromWorld(Eigen::Vector3f eye_world,
+[[nodiscard]] Eigen::Affine3f lookAt_cameraFromWorld(Eigen::Vector3f eye_world,
                                                      Eigen::Vector3f target_world,
                                                      Eigen::Vector3f up_world);
 
@@ -75,14 +72,10 @@ struct Camera {
    private:
     Eigen::Vector3f m_origin_camera;
     Eigen::Vector2f m_minMaxT;
-    Eigen::Matrix3f m_ndcFromPixel;
+    Eigen::Affine2f m_ndcFromPixel;
 };
 
 class RayTracer {};
-
-struct Material {
-      Eigen::Vector3f color;
-};
 
 class AggregatePrimitive {};
 }  // namespace VdbFields::RayTracer

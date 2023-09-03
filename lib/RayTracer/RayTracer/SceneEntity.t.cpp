@@ -7,8 +7,8 @@ namespace VdbFields {
 namespace {
 class InfiniteXYPlaneIntersector {
    public:
-    explicit InfiniteXYPlaneIntersector(float zoffset_mm, Eigen::Matrix4f worldFromCamera,
-                                        Eigen::Matrix4f worldFromGeom)
+    explicit InfiniteXYPlaneIntersector(float zoffset_mm, const Eigen::Affine3f& worldFromCamera,
+                                        const Eigen::Affine3f& worldFromGeom)
         : m_zoffset_mm(zoffset_mm),
           m_worldFromCamera(worldFromCamera),
           m_worldFromGeom(worldFromGeom) {}
@@ -21,17 +21,17 @@ class InfiniteXYPlaneIntersector {
         const auto intersectionPt_world = (ray_world.origin + hitT * ray_world.direction).eval();
         return RayTracer::RayIntersect{intersectionPt_world, hitT};
     }
-    [[nodiscard]] virtual bool hasIntersection(const RayTracer::Ray& ray) const final {
+    [[nodiscard]] virtual bool hasIntersection(const RayTracer::Ray& ray) const {
         return false;
     }
     [[nodiscard]] virtual RayTracer::BRDF getBRDF(
-        const RayTracer::RayIntersect& intersect) const final {
+        const RayTracer::RayIntersect& intersect) const {
         return {};
     }
 
    private:
-    Eigen::Matrix4f m_worldFromGeom;
-    Eigen::Matrix4f m_worldFromCamera;
+    Eigen::Affine3f m_worldFromGeom;
+    Eigen::Affine3f m_worldFromCamera;
     float m_zoffset_mm;
 };
 }  // namespace
@@ -60,7 +60,7 @@ TEST_CASE("SceneEntity: Ray sampling") {
 TEST_CASE("Test camera ray") {
     using namespace RayTracer;
     // auto worldFromCamera = Eigen::Matrix4f::Identity();
-    Eigen::Matrix4f worldFromCamera =
+    Eigen::Affine3f worldFromCamera =
         lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -1.f),
                                Eigen::Vector3f(0.f, 1.f, 0.f))
             .inverse();
@@ -71,7 +71,7 @@ TEST_CASE("Test camera ray") {
 
     auto sampler = Sampler();
     ShapeIntersector infinitePlaneIntersector =
-        ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, worldFromCamera, Eigen::Matrix4f::Identity());
+        ShapeIntersector::fromImpl<InfiniteXYPlaneIntersector>(-4.f, worldFromCamera, Eigen::Affine3f::Identity());
 
     auto aspectRatio = static_cast<float>(screenShape[0]) / screenShape[1];
     auto rayIncrements =
@@ -80,7 +80,7 @@ TEST_CASE("Test camera ray") {
     // Sphere center
     Eigen::Vector3f sphereCenter = {0, 0, -8.f};
     auto sphereIntersector = ShapeIntersector::fromImpl<SphereIntersector>(
-        Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, worldFromCamera, Eigen::Matrix4f::Identity());
+        Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, worldFromCamera, Eigen::Affine3f::Identity());
 
     Film film{screenShape};
     for (int i = 0; i < screenShape.prod(); ++i) {
