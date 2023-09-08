@@ -1,6 +1,7 @@
 #include <RayTracer/GeometryRayIntersector.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#pragma GCC optimize ("O0")
 
 namespace VdbFields::RayTracer {
 std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray_camera) const {

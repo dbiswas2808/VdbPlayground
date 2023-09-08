@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <RayTracer/Film.h>
 #include <RayTracer/GeometryRayIntersector.h>
+#include <RayTracer/Light.h>
 
 namespace VdbFields {
 namespace {
@@ -57,11 +58,29 @@ TEST_CASE("SceneEntity: Ray sampling") {
     CHECK(sampler.getSample_px() == Eigen::Vector2f(50.5f, 60.5f));
 }
 
+TEST_CASE("Test lookAt") {
+    using namespace RayTracer;
+
+    Eigen::Affine3f worldFromCamera =
+        lookAt_cameraFromWorld(Eigen::Vector3f(-8.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -8.f),
+                               Eigen::Vector3f(0.f, 1.f, 0.f))
+            .inverse();
+
+    auto vec_camera = Eigen::Vector3f(0.f, 0.f, -1.f);
+
+    Eigen::Vector3f vec_world = worldFromCamera.rotation() * vec_camera;
+    CHECK((vec_world - Eigen::Vector3f(1.f, 0.f, -1.f).normalized()).norm() < epsilon_mm<float>);
+
+    auto pt_camera = Eigen::Vector3f(0.f, 0.f, 0.f);
+    auto pt_world = worldFromCamera * pt_camera;
+    CHECK((pt_world - Eigen::Vector3f(-8.f, 0.f, 0.f)).norm() < epsilon_mm<float>);
+}
+
 TEST_CASE("Test camera ray") {
     using namespace RayTracer;
     // auto worldFromCamera = Eigen::Matrix4f::Identity();
     Eigen::Affine3f worldFromCamera =
-        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -1.f),
+        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -8.f),
                                Eigen::Vector3f(0.f, 1.f, 0.f))
             .inverse();
 
@@ -82,6 +101,7 @@ TEST_CASE("Test camera ray") {
     auto sphereIntersector = ShapeIntersector::fromImpl<SphereIntersector>(
         Sphere{sphereCenter, 4.f * std::sqrt(2.f)}, worldFromCamera, Eigen::Affine3f::Identity());
 
+    // Generate rays and test intersections
     Film film{screenShape};
     for (int i = 0; i < screenShape.prod(); ++i) {
         auto px = Eigen::Vector2i{i % screenShape[0], i / screenShape[0]};
@@ -113,7 +133,33 @@ TEST_CASE("Test camera ray") {
                 std::abs((intersectPt->point_world - Eigen::Vector3f(0.f, 0.f, -8.f)).stableNorm() -
                          4.f * std::sqrt(2.f)) < epsilon_mm<float>);
             CHECK((proj - Eigen::Vector3f(0.f, 0.f, -4.f)).stableNorm() < 4.f);
-            film.addSample(px, alpha  * Eigen::Vector3f(0.f, 1.f, 0.f) +  (1 - alpha)  * Eigen::Vector3f(1.f, 0.f, 0.f));
+        }
+
+        // Generate a test image
+        if (intersectPt.has_value()) {
+            DirectionalLight lightDir1(Eigen::Vector3f(-1.f, 1.f, 1.f).normalized(),
+                                       Eigen::Vector3f(1.f, 1.f, 1.f));
+            DirectionalLight lightDir2(Eigen::Vector3f(1.f, -1.f, 1.f).normalized(),
+                                       Eigen::Vector3f(1.f, 1.f, 1.f));
+            PointLight lightPoint1(Eigen::Vector3f(0.f, -16.f, 16.f).normalized(),
+                                   Eigen::Vector3f(1.f, 1.f, 1.f));
+
+            // Create BRDF with appropriate values for testing
+            BRDF material = {
+                .diffuse = Eigen::Vector3f(0.1, 0.8, 0.8),   // Diffuse reflectance (kd)
+                .specular = Eigen::Vector3f(0.5, 0.1, 0.5),  // Specular reflectance (ks)
+                .ambient = Eigen::Vector3f(0.2, 0.2, 0.1),   // Ambient reflectance (ka)
+                .emission = Eigen::Vector3f(0.0, 0.0, 0.0),  // Emission (glow)
+                .shininess = 30                              // Shininess (n)
+            };
+
+            std::vector<Light*> lights = {&lightDir1, &lightDir2, &lightPoint1};
+            BRDF::Color color = {0, 0, 0};
+            for (auto* light : lights) {
+                color += phong_shading(light->getDirection(intersectPt->point_world),
+                                       -ray_camera.direction, intersectPt->normal_world, material);
+            }
+            film.addSample(px, color);
         }
     }
     film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");

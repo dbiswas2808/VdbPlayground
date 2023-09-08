@@ -37,15 +37,15 @@ Ray Camera::getRay_camera(Eigen::Vector2f sample_px) const {
 [[nodiscard]] Eigen::Affine3f RayTracer::lookAt_cameraFromWorld(Eigen::Vector3f eye_world,
                                                                 Eigen::Vector3f target_world,
                                                                 Eigen::Vector3f up_world) {
-    auto dir_world = (eye_world - target_world).stableNormalized();
-    auto right_world = up_world.cross(dir_world).stableNormalized();
-    auto newUp_world = dir_world.cross(right_world).stableNormalized();
+    auto dir_world = (eye_world - target_world).normalized();
+    auto right_world = up_world.cross(dir_world).normalized();
+    auto newUp_world = dir_world.cross(right_world).normalized();
 
     Eigen::Affine3f cameraFromWorld = Eigen::Affine3f::Identity();
     cameraFromWorld.linear().row(0) = right_world;
     cameraFromWorld.linear().row(1) = newUp_world;
     cameraFromWorld.linear().row(2) = dir_world;
-    cameraFromWorld.translation() = -eye_world;
+    cameraFromWorld *= Eigen::Translation3f(-eye_world);
 
     return cameraFromWorld;
 }
