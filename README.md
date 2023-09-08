@@ -27,5 +27,5 @@ Currently Implements:
 ![Bull skeleton](./images/Bull_skeleton.png)
              Skeleton
 
-# Ray tracing
+# 2. Ray tracing
 ![Ray_tracer_test](./images/rt_test.png)
