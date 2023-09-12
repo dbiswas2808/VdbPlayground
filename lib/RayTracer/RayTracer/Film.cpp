@@ -102,7 +102,7 @@ void writePngRGB(Eigen::MatrixXf denseImage, std::string filename) {
     png_destroy_write_struct(&png, &info);
     fclose(fp);
 }
-}
+}  // namespace
 
 void Film::addSample(Eigen::Vector2i pixel, Eigen::Vector3f color) {
     if (color != Eigen::Vector3f::Zero()) {
@@ -112,7 +112,7 @@ void Film::addSample(Eigen::Vector2i pixel, Eigen::Vector3f color) {
     }
 }
 
-void Film::imageToFile(std::string filename) {
+void Film::imageToFile(std::string filename) const {
     writePngRGB(m_image, filename);
 }
-}
+}  // namespace VdbFields::RayTracer

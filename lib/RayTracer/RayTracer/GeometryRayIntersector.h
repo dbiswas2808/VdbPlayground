@@ -87,20 +87,13 @@ class AggregratePrimitiveIntersector {
     AggregratePrimitiveIntersector(std::vector<ShapeIntersector> shapeIntersectors)
         : m_shapeIntersectors(std::move(shapeIntersectors)) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const {
-        std::optional<RayIntersect> closestIntersect;
-
-        for (const auto& shapeIntersector : m_shapeIntersectors) {
-            if (auto intersect = shapeIntersector.intersect(ray_world)) {
-                if (!closestIntersect || intersect->hitT_mm < closestIntersect->hitT_mm) {
-                    closestIntersect = intersect;
-                }
-            }
-        }
-        return closestIntersect;
-    }
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const;
     [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const {
         return intersect(ray_world).has_value();
+    }
+
+    void addShapeIntersector(ShapeIntersector shapeIntersector) {
+        m_shapeIntersectors.push_back(std::move(shapeIntersector));
     }
 
    private:

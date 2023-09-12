@@ -4,20 +4,23 @@
 #include <RayTracer/GeometryRayIntersector.h>
 #include <RayTracer/Light.h>
 #include <RayTracer/Material.h>
+#include <RayTracer/RayTracer.h>
 #include <RayTracer/SceneEntity.h>
 
 namespace VdbFields::RayTracer {
-// class Scene {
-//      public:
-//       Scene(Sampler<> sampler, Camera camera, RayTracer rayTrace, Film film)
-//           : m_sampler(sampler), m_camera(camera), m_rayTracer(rayTrace), m_film(film) {}
+class Scene {
+     public:
+      Scene(Eigen::Vector2i shape, Sampler<> sampler, Camera camera,
+            std::vector<ShapeIntersector>&& shapeIntersectors, std::vector<Light>&& lights);
 
-//       void rayTrace();
+      void rayTrace();
 
-//      private:
-//       Sampler<> m_sampler;
-//       Camera m_camera;
-//       RayTracerImple m_rayTracer;
-//       Film m_film;
-// };
+     private:
+      [[nodiscard]] BRDF::Color rayTraceAtPx(const Eigen::Vector2i& px);
+
+      Sampler<> m_sampler;
+      Camera m_camera;
+      RayTracerImpl m_rayTracer;
+      Film m_film;
+};
 }  // namespace VdbFields::RayTracer

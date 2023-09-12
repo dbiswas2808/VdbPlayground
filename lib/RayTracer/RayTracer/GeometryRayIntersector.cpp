@@ -54,4 +54,17 @@ std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray_world) c
                         .normal_world = normal_world.eval(),
                         .brdf = m_material.getBRDF(intersectionPt_world)};
 }
+
+std::optional<RayIntersect> AggregratePrimitiveIntersector::intersect(const Ray& ray_world) const {
+    std::optional<RayIntersect> closestIntersect;
+
+    for (const auto& shapeIntersector : m_shapeIntersectors) {
+        if (auto intersect = shapeIntersector.intersect(ray_world)) {
+            if (!closestIntersect || intersect->hitT_mm < closestIntersect->hitT_mm) {
+                closestIntersect = intersect;
+            }
+        }
+    }
+    return closestIntersect;
 }
+}  // namespace VdbFields::RayTracer
