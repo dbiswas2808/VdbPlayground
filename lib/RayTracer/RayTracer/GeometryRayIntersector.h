@@ -1,15 +1,21 @@
+#pragma once
 #include <RayTracer/Geometry.h>
+#include <RayTracer/Ray.h>
 #include <memory>
 #include <optional>
 
-#include <RayTracer/Material.h>
-
 namespace VdbFields::RayTracer {
+template <class T>
+inline constexpr std::enable_if_t<std::is_floating_point_v<T>, T> epsilon_mm;
+
+template <>
+inline constexpr float epsilon_mm<float> = 0.0001f;
+
+// Using external polymorphism for shape intersections to avoid inheritence kludge
 class ShapeIntersector {
     struct Concept {
         [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const = 0;
         [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const = 0;
-        [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const = 0;
         [[nodiscard]] virtual std::unique_ptr<Concept> clone() const = 0;
     };
 
@@ -22,16 +28,12 @@ class ShapeIntersector {
 
         Model(const Model& other) = delete;
 
-        [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const final {
-            return m_t.intersect(ray_camera);
+        [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const final {
+            return m_t.intersect(ray_world);
         }
 
-        [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const final {
-            return m_t.hasIntersection(ray_camera);
-        }
-
-        [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final {
-            return m_t.getBRDF(intersect);
+        [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const final {
+            return m_t.hasIntersection(ray_world);
         }
 
         [[nodiscard]] virtual std::unique_ptr<Concept> clone() const {
@@ -45,23 +47,21 @@ class ShapeIntersector {
 
    public:
     template <class T, class... Args>
-    [[nodiscard]] static ShapeIntersector fromImpl(Args&&... arg) {
+    [[nodiscard]] static ShapeIntersector fromImpl(Args&&... args) {
         return ShapeIntersector(std::make_unique<Model<T>>(typename Model<T>::DisableCopy{},
-                                                           std::forward<Args>(arg)...));
+                                                           std::forward<Args>(args)...));
     }
 
-    explicit ShapeIntersector(const ShapeIntersector& other)
+    ShapeIntersector(const ShapeIntersector& other)
         : m_intersector(other.m_intersector->clone()) {}
     ShapeIntersector(ShapeIntersector&& other) : m_intersector(std::move(other.m_intersector)) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const {
-        return m_intersector->intersect(ray_camera);
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const {
+        return m_intersector->intersect(ray_world);
     }
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const {
-        return m_intersector->hasIntersection(ray_camera);
-    }
-    [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const {
-        return m_intersector->getBRDF(intersect);
+
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const {
+        return m_intersector->hasIntersection(ray_world);
     }
 
    private:
@@ -70,19 +70,41 @@ class ShapeIntersector {
 
 class SphereIntersector {
    public:
-    SphereIntersector(Sphere sphere, const Eigen::Affine3f& worldFromCamera,
-                      const Eigen::Affine3f& worldFromGeom)
-        : m_sphere(sphere), m_worldFromCamera(worldFromCamera), m_worldFromGeom(worldFromGeom) {}
+    SphereIntersector(Sphere sphere, const Eigen::Affine3f& worldFromGeom, Material material)
+        : m_sphere(sphere), m_worldFromGeom(worldFromGeom), m_material(material) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_camera) const;
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_camera) const { return false; }
-    [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const { return m_material.getBRDF(intersect); }
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const;
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const;
 
    private:
-    Eigen::Affine3f m_worldFromCamera;
     Eigen::Affine3f m_worldFromGeom;
     Sphere m_sphere;
     Material m_material;
+};
+
+class AggregratePrimitiveIntersector {
+   public:
+    AggregratePrimitiveIntersector(std::vector<ShapeIntersector> shapeIntersectors)
+        : m_shapeIntersectors(std::move(shapeIntersectors)) {}
+
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const {
+        std::optional<RayIntersect> closestIntersect;
+
+        for (const auto& shapeIntersector : m_shapeIntersectors) {
+            if (auto intersect = shapeIntersector.intersect(ray_world)) {
+                if (!closestIntersect || intersect->hitT_mm < closestIntersect->hitT_mm) {
+                    closestIntersect = intersect;
+                }
+            }
+        }
+        return closestIntersect;
+    }
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const {
+        return intersect(ray_world).has_value();
+    }
+
+   private:
+    std::vector<ShapeIntersector> m_shapeIntersectors;
 };
 
 // class TriMeshIntersector {

@@ -10,6 +10,8 @@ RayTracer/GeometryRayIntersector.h
 RayTracer/Light.h
 RayTracer/Material.h
 RayTracer/Ray.h
+RayTracer/RayTracer.h
+RayTracer/RayTracer.cpp
 RayTracer/Scene.h
 RayTracer/SceneEntity.h
 RayTracer/Film.cpp
@@ -45,8 +47,9 @@ target_include_directories(RayTracer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
 add_executable(RayTracerTest 
     RayTracer/Film.t.cpp
     RayTracer/Geometry.t.cpp
-    RayTracer/SceneEntity.t.cpp
     RayTracer/Light.t.cpp
+    RayTracer/RayTracer.t.cpp
+    RayTracer/SceneEntity.t.cpp
 )
 set_target_properties(RayTracerTest PROPERTIES LINKER_LANGUAGE CXX)
 set_property(TARGET RayTracerTest PROPERTY CXX_STANDARD 20)

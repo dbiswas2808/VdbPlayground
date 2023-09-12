@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -74,8 +75,4 @@ struct Camera {
     Eigen::Vector2f m_minMaxT;
     Eigen::Affine2f m_ndcFromPixel;
 };
-
-class RayTracer {};
-
-class AggregatePrimitive {};
 }  // namespace VdbFields::RayTracer

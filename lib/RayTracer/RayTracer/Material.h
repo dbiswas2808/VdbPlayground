@@ -1,5 +1,5 @@
+#pragma once
 #include <Eigen/Geometry>
-#include <RayTracer/Ray.h>
 
 namespace VdbFields::RayTracer {
 struct BRDF {
@@ -14,7 +14,7 @@ struct BRDF {
 struct Material {
     BRDF constantBRDF;
 
-    [[nodiscard]] BRDF getBRDF(RayIntersect) const {
+    [[nodiscard]] BRDF getBRDF(Eigen::Vector3f) const {
         return constantBRDF;
     }
 };

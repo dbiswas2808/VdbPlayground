@@ -3,8 +3,8 @@
 
 namespace VdbFields::RayTracer {
 namespace {
-void writePngGray(const Eigen::SparseMatrix<float>& image, std::string filename) {
-    auto denseImage = image.toDense();
+void writePngGray(Eigen::MatrixXf denseImage, std::string filename) {
+    // auto denseImage = image.toDense();
     const float minValue = denseImage.minCoeff();
     const float maxValue = denseImage.maxCoeff();
     const int width = denseImage.cols() / 3;
@@ -53,8 +53,8 @@ void writePngGray(const Eigen::SparseMatrix<float>& image, std::string filename)
     fclose(fp);
 }
 
-void writePngRGB(const Eigen::SparseMatrix<float>& image, std::string filename) {
-    auto denseImage = image.toDense();
+void writePngRGB(Eigen::MatrixXf denseImage, std::string filename) {
+    // auto denseImage = image.toDense();
     const float minValue = denseImage.minCoeff();
     const float maxValue = denseImage.maxCoeff();
     const int width = denseImage.cols();
@@ -105,9 +105,11 @@ void writePngRGB(const Eigen::SparseMatrix<float>& image, std::string filename) 
 }
 
 void Film::addSample(Eigen::Vector2i pixel, Eigen::Vector3f color) {
-    m_image.coeffRef(pixel[1], 3 * pixel[0]) += color[0];
-    m_image.coeffRef(pixel[1], 3 * pixel[0] + 1) += color[1];
-    m_image.coeffRef(pixel[1], 3 * pixel[0] + 2) += color[2];
+    if (color != Eigen::Vector3f::Zero()) {
+        m_image.coeffRef(pixel[1], 3 * pixel[0]) += color[0];
+        m_image.coeffRef(pixel[1], 3 * pixel[0] + 1) += color[1];
+        m_image.coeffRef(pixel[1], 3 * pixel[0] + 2) += color[2];
+    }
 }
 
 void Film::imageToFile(std::string filename) {
