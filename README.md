@@ -9,7 +9,7 @@ Currently Implements:
     - From distance transform divergence
 
 ## 1.1. Skeletonization
-### 1.1.1. From distance transform divergence
+### 1.1.1. Hamilton-Jacobi skeletons
 #### 1.1.1.1. Icosahedron skeleton
 ![Icosahedron original](./images/Icosahedron_original.png)
                 Original
@@ -29,3 +29,5 @@ Currently Implements:
 
 # 2. Ray tracing
 ![Ray_tracer_test](./images/rt_test.png)
+
+![Ray_tracer_test_mesh](./images/pyramid_test.png)
