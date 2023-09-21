@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 
 find_package(PNG REQUIRED)
+
 include_directories(${PNG_INCLUDE_DIRS})
 
 add_library(RayTracer
+RayTracer/BuildVH.h
 RayTracer/Film.h
 RayTracer/Geometry.h
 RayTracer/GeometryRayIntersector.h
@@ -11,15 +13,16 @@ RayTracer/Light.h
 RayTracer/Material.h
 RayTracer/Ray.h
 RayTracer/RayTracer.h
-RayTracer/RayTracer.cpp
 RayTracer/Scene.h
 RayTracer/SceneEntity.h
+RayTracer/BuildVH.cpp
 RayTracer/Film.cpp
 RayTracer/Geometry.cpp
 RayTracer/GeometryRayIntersector.cpp
 RayTracer/Light.cpp
 RayTracer/Material.cpp
 RayTracer/Ray.cpp
+RayTracer/RayTracer.cpp
 RayTracer/Scene.cpp
 RayTracer/SceneEntity.cpp
 )
@@ -45,10 +48,12 @@ find_package(Catch2 3 REQUIRED)
 target_include_directories(RayTracer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 add_executable(RayTracerTest 
+    RayTracer/BuildVH.t.cpp
     RayTracer/Film.t.cpp
     RayTracer/Geometry.t.cpp
     RayTracer/Light.t.cpp
     RayTracer/RayTracer.t.cpp
+    RayTracer/Scene.t.cpp
     RayTracer/SceneEntity.t.cpp
 )
 set_target_properties(RayTracerTest PROPERTIES LINKER_LANGUAGE CXX)

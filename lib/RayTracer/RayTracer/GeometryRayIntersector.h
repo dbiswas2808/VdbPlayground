@@ -1,16 +1,12 @@
 #pragma once
-#include <RayTracer/Geometry.h>
-#include <RayTracer/Ray.h>
 #include <memory>
 #include <optional>
+#include <span>
+#include <RayTracer/BuildVH.h>
+#include <RayTracer/Geometry.h>
+#include <RayTracer/Ray.h>
 
 namespace VdbFields::RayTracer {
-template <class T>
-inline constexpr std::enable_if_t<std::is_floating_point_v<T>, T> epsilon_mm;
-
-template <>
-inline constexpr float epsilon_mm<float> = 0.0001f;
-
 // Using external polymorphism for shape intersections to avoid inheritence kludge
 class ShapeIntersector {
     struct Concept {
@@ -82,6 +78,44 @@ class SphereIntersector {
     Material m_material;
 };
 
+class TriMeshIntersector {
+   public:
+    TriMeshIntersector(std::span<const Eigen::Vector3f> triangleSoup, Eigen::Affine3f worldFromGeom,
+                       Material material)
+        : bvh(std::make_shared<BVHMesh>(BVHMesh::makeMesh(triangleSoup))),
+          m_worldFromGeom(worldFromGeom),
+          m_geomFromWorld(worldFromGeom.inverse()),
+          m_material(material) {
+            bvh.buildBVH();
+          }
+
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final {
+        BVHRay ray_local = {.origin = (m_geomFromWorld * ray.origin).eval(),
+                            .direction = (m_geomFromWorld.rotation() * ray.direction).eval(),
+                            .invDirection = ray.direction.cwiseInverse()};
+        bvh.intersect(ray_local);
+        if (ray_local.hasIntersection()) {
+            const auto intersectionPt_world =
+                m_worldFromGeom * (ray_local.origin + ray_local.t * ray_local.direction);
+            const auto normal_world = m_worldFromGeom.rotation().transpose().inverse() * ray_local.normal;
+            return RayIntersect{.point_world = intersectionPt_world,
+                                .hitT_mm = ray_local.t,
+                                .normal_world = normal_world,
+                                .brdf = m_material.getBRDF(intersectionPt_world)};
+        }
+        return std::nullopt;
+    }
+    [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final {
+        return static_cast<bool>(intersect(ray));
+    }
+
+   private:
+    Eigen::Affine3f m_worldFromGeom;
+    Eigen::Affine3f m_geomFromWorld;
+    BuildVH bvh;
+    Material m_material;
+};
+
 class AggregratePrimitiveIntersector {
    public:
     AggregratePrimitiveIntersector(std::vector<ShapeIntersector> shapeIntersectors)
@@ -99,18 +133,4 @@ class AggregratePrimitiveIntersector {
    private:
     std::vector<ShapeIntersector> m_shapeIntersectors;
 };
-
-// class TriMeshIntersector {
-//    public:
-//     TriMeshIntersector(TriMesh&& triMesh, Eigen::Matrix4f worldFromGeom)
-//         : m_triMesh(triMesh), m_worldFromGeom(worldFromGeom) {}
-
-//     [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
-//     [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final { return false; }
-//     [[nodiscard]] virtual BRDF getBRDF(const RayIntersect& intersect) const final { return {}; }
-
-//    private:
-//     Eigen::Matrix4f m_worldFromGeom;
-//     TriMesh m_triMesh;
-// };
 }  // namespace VdbFields::RayTracer

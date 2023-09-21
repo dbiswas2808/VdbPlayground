@@ -1,4 +1,5 @@
 #include <RayTracer/RayTracer.h>
+#include <ranges>
 #include <RayTracer/SceneEntity.h>
 
 namespace VdbFields {
@@ -11,7 +12,7 @@ namespace {
 [[nodiscard]] RayTracer::Ray snellsReflection(const RayTracer::Ray& rayIn,
                                               const RayTracer::RayIntersect& intersect) {
     auto refDir = snellsReflection(rayIn.direction, intersect.normal_world);
-    return Ray{intersect.point_world, refDir};
+    return Ray{intersect.point_world + epsilon_mm<float> * intersect.normal_world, refDir};
 }
 
 [[nodiscard]] RayTracer::BRDF::Color getVisibleLightIntensity(const RayIntersect& intersect,

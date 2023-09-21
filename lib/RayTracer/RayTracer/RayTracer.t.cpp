@@ -8,7 +8,7 @@
 #include <RayTracer/SceneEntity.h>
 
 namespace VdbFields {
-TEST_CASE("Test full ray tracing") {
+TEST_CASE("Test  Ray tracer") {
     using namespace RayTracer;
     // auto worldFromCamera = Eigen::Matrix4f::Identity();
     Eigen::Affine3f worldFromCamera =
@@ -20,8 +20,6 @@ TEST_CASE("Test full ray tracing") {
     auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                          Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
     auto sampler = Sampler();
-
-    auto aspectRatio = static_cast<float>(screenShape[0]) / screenShape[1];
 
     // Create BRDF with appropriate values for testing
     BRDF material1 = {
@@ -103,4 +101,4 @@ TEST_CASE("Test full ray tracing") {
     }
     film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");
 }
-}
+}  // namespace VdbFields

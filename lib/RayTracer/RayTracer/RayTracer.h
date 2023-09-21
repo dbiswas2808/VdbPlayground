@@ -10,11 +10,6 @@ namespace VdbFields::RayTracer {
     Ray rayIn, std::span<const Light> lights,
     const AggregratePrimitiveIntersector& aggregatePrimitiveIntersector, int depth = 5);
 
-// Ray tracer shading calculator for multiple lights accounting for visibility
-// [[nodiscard]] BRDF::Color rayTracerLoop(
-//     Ray inRay, std::span<Light const* const> lights,
-//     const AggregratePrimitiveIntersector& aggregatePrimitiveIntersector);
-
 class RayTracerImpl {
    public:
     RayTracerImpl(AggregratePrimitiveIntersector&& aggregatePrimitiveIntersector,

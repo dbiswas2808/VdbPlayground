@@ -41,7 +41,7 @@ void writePngGray(Eigen::MatrixXf denseImage, std::string filename) {
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            row[x] = static_cast<png_byte>(denseImage(y, 3 * x) );       // Red channel
+            row[x] = static_cast<png_byte>(denseImage(y, 3 * x));       // Red channel
         }
         png_write_row(png, row.data());
     }
