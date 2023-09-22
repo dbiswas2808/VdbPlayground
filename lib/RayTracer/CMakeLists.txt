@@ -7,7 +7,7 @@ find_package(TBB REQUIRED)
 include_directories(${PNG_INCLUDE_DIRS})
 
 add_library(RayTracer
-RayTracer/BuildVH.h
+RayTracer/Bvh.h
 RayTracer/Film.h
 RayTracer/Geometry.h
 RayTracer/GeometryRayIntersector.h
@@ -17,7 +17,7 @@ RayTracer/Ray.h
 RayTracer/RayTracer.h
 RayTracer/Scene.h
 RayTracer/SceneEntity.h
-RayTracer/BuildVH.cpp
+RayTracer/Bvh.cpp
 RayTracer/Film.cpp
 RayTracer/Geometry.cpp
 RayTracer/GeometryRayIntersector.cpp
@@ -51,7 +51,7 @@ find_package(Catch2 3 REQUIRED)
 target_include_directories(RayTracer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 add_executable(RayTracerTest 
-    RayTracer/BuildVH.t.cpp
+    RayTracer/Bvh.t.cpp
     RayTracer/Film.t.cpp
     RayTracer/Geometry.t.cpp
     RayTracer/Light.t.cpp

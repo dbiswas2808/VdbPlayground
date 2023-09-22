@@ -16,10 +16,9 @@ struct UniformRandomSampler {
     void setPixel(Eigen::Vector2i pixel) { m_pixel = pixel; }
     Eigen::Vector2i m_pixel;
     mutable std::mt19937 gen;
-    mutable std::normal_distribution<float> dis; 
-
+    mutable std::normal_distribution<float> dis;
 };
-}
+}  // namespace
 
 TEST_CASE("Test full ray tracing") {
     using namespace RayTracer;
@@ -100,7 +99,8 @@ TEST_CASE("Test full ray tracing") {
             std::cout << "progress: " << static_cast<float>(num) / den << std::endl;
         }
     });
-    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/spheres_test.png");
+    scene.writRayTracedImageToFile(
+        "/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/spheres_test.png");
 }
 
 TEST_CASE("Full ray tracing on tri mesh") {
@@ -192,6 +192,8 @@ TEST_CASE("Full ray tracing on tri mesh") {
               << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count()
               << " ms\n";
 
-    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/pyramid_spheres_test.png");
+    scene.writRayTracedImageToFile(
+        "/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/"
+        "pyramid_spheres_test.png");
 }
 }  // namespace VdbFields

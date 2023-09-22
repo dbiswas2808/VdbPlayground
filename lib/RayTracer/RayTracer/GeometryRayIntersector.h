@@ -2,7 +2,7 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <RayTracer/BuildVH.h>
+#include <RayTracer/Bvh.h>
 #include <RayTracer/Geometry.h>
 #include <RayTracer/Ray.h>
 
