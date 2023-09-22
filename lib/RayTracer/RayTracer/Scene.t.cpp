@@ -32,7 +32,6 @@ TEST_CASE("Test full ray tracing") {
     auto screenShape = Eigen::Vector2i(10'000, 10'000);
     auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                          Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
-    auto sampler = Sampler();
 
     // Create BRDF with appropriate values for testing
     BRDF material1 = {
@@ -91,15 +90,17 @@ TEST_CASE("Test full ray tracing") {
         Light::fromImpl<PointLight>(Eigen::Vector3f(-16.f, 0.f, 16.f).normalized(), 10.f);
 
     std::vector<Light> lights = {lightDir1, lightDir2, lightPoint1};
-    
-    auto scene = Scene(screenShape, sampler, camera, std::vector{
-        sphereIntersector1, sphereIntersector2, sphereIntersector3, sphereIntersector4}, std::move(lights));
+
+    auto scene = Scene<Sampler<>>(
+        screenShape, camera,
+        std::vector{sphereIntersector1, sphereIntersector2, sphereIntersector3, sphereIntersector4},
+        std::move(lights));
     scene.rayTrace([](int num, int den) {
         if (num % 10'000 == 0) {
             std::cout << "progress: " << static_cast<float>(num) / den << std::endl;
         }
     });
-    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");
+    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/spheres_test.png");
 }
 
 TEST_CASE("Full ray tracing on tri mesh") {
@@ -114,7 +115,6 @@ TEST_CASE("Full ray tracing on tri mesh") {
     auto screenShape = Eigen::Vector2i(10'000, 10'000);
     auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                          Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
-    auto sampler = Sampler<UniformRandomSampler>();
 
     // Create BRDF with appropriate values for testing
     BRDF material1 = {
@@ -169,16 +169,29 @@ TEST_CASE("Full ray tracing on tri mesh") {
 
     std::vector<Light> lights = {lightDir1, lightDir2, lightPoint1};
 
-    auto scene = Scene(screenShape, sampler, camera,
-                       std::vector{pyramid1, pyramid2, sphereIntersector4}, std::move(lights));
+    auto scene = Scene<Sampler<UniformRandomSampler>>(
+        screenShape, camera, std::vector{pyramid1, pyramid2, sphereIntersector4},
+        std::move(lights));
+
+    std::atomic<int> atomicProgress;
+    std::mutex m;
+    auto t_start = std::chrono::high_resolution_clock::now();
     scene.rayTrace(
-        [](int num, int den) {
-            if (num % 10'000 == 0) {
-                std::cout << "progress: " << static_cast<float>(num) / den << std::endl;
+        [&atomicProgress, &m](int num, int den) {
+            atomicProgress++;
+            if (auto val = atomicProgress.load(); val % 40'000 == 0) {
+                std::scoped_lock lock(m);
+                std::cout << "progress: " << static_cast<float>(val) / den << std::endl;
             }
         },
         10);
 
-    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/pyramid_test.png");
+    auto t_end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Elapsed time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count()
+              << " ms\n";
+
+    scene.writRayTracedImageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/pyramid_spheres_test.png");
 }
 }  // namespace VdbFields

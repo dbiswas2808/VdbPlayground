@@ -99,6 +99,6 @@ TEST_CASE("Test  Ray tracer") {
             film.addSample(px, color);
         }
     }
-    film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/test.png");
+    film.imageToFile("/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/rt_test.png");
 }
 }  // namespace VdbFields
