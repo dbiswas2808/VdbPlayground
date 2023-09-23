@@ -3,10 +3,11 @@
 #include <ranges>
 #include <span>
 #include <Eigen/Geometry>
+#include <RayTracer/Common.h>
 #include <RayTracer/Geometry.h>
 #include <RayTracer/Ray.h>
 
-namespace VdbFields::RayTracer {
+namespace VdbFields::RayTracer{
 struct AABB {
     Eigen::Vector3f aabbMin = Eigen::Vector3f::Constant(std::numeric_limits<float>::infinity());
     Eigen::Vector3f aabbMax = Eigen::Vector3f::Constant(-std::numeric_limits<float>::infinity());
@@ -92,9 +93,9 @@ struct BVHMesh {
     }
 };
 
-class BuildVH {
+class BVH {
    public:
-    BuildVH(std::shared_ptr<BVHMesh> mesh)
+    BVH(cow<const BVHMesh> mesh)
         : m_mesh(std::move(mesh)), m_triIdx(m_mesh->triangles.size()) {
         std::iota(m_triIdx.begin(), m_triIdx.end(), 0);
     }
@@ -105,10 +106,6 @@ class BuildVH {
 
    private:
     [[nodiscard]] const BVHMesh::Triangle& getTriangle(uint triIdx) const {
-        return m_mesh->triangles[m_triIdx[triIdx]];
-    }
-
-    [[nodiscard]] BVHMesh::Triangle& getTriangle(uint triIdx) {
         return m_mesh->triangles[m_triIdx[triIdx]];
     }
 
@@ -130,7 +127,17 @@ class BuildVH {
     uint m_rootIndex = 0;
     std::vector<BVHNode> m_nodes;
     uint m_numNodes = 0;
-    std::shared_ptr<BVHMesh> m_mesh;
+    cow<const BVHMesh> m_mesh;
     std::vector<size_t> m_triIdx;
+};
+
+class BVHInstance {
+   public:
+    BVHInstance(cow<const BVH> bvh) : m_bvh(std::move(bvh)){};
+
+   private:
+    cow<const BVH> m_bvh;
+    Eigen::Affine3f m_worldFromGeom;
+    Eigen::Affine3f m_geomFromWorld;
 };
 }  // namespace VdbFields::RayTracer

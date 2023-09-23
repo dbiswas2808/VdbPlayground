@@ -86,13 +86,13 @@ float RayTracer::intersectAABB(const BVHRay& ray, const Eigen::Vector3f& aabbMin
 }
 
 namespace RayTracer {
-struct BuildVH::BestSplitData {
+struct BVH::BestSplitData {
     float cost = std::numeric_limits<float>::infinity();
     uint axis;
     float splitPos;
 };
 
-[[nodiscard]] BuildVH::BestSplitData BuildVH::findBestSplit(const BVHNode& node) const {
+[[nodiscard]] BVH::BestSplitData BVH::findBestSplit(const BVHNode& node) const {
     BestSplitData result;
 
     for (uint ax = 0; ax < 3; ++ax) {
@@ -110,11 +110,7 @@ struct BuildVH::BestSplitData {
             float candidatePos = boundsMin + ii * scale;
             float cost = evaluateSAH(node, ax, candidatePos);
             if (cost < result.cost) {
-                result = BestSplitData{
-                    .cost = cost,
-                    .axis = ax,
-                    .splitPos = candidatePos
-                };
+                result = BestSplitData{.cost = cost, .axis = ax, .splitPos = candidatePos};
             }
         }
     }
@@ -122,7 +118,7 @@ struct BuildVH::BestSplitData {
     return result;
 }
 
-float BuildVH::evaluateSAH(const BVHNode& node, uint axis, float splitPos) const {
+float BVH::evaluateSAH(const BVHNode& node, uint axis, float splitPos) const {
     AABB boxL;
     AABB boxR;
     size_t triCountL = 0;
@@ -144,16 +140,16 @@ float BuildVH::evaluateSAH(const BVHNode& node, uint axis, float splitPos) const
             extend(boxR, triangle);
         }
     }
-    
+
     return boxL.area() * triCountL + boxR.area() * triCountR;
 }
 
-void BuildVH::intersect(BVHRay& ray) const {
+void BVH::intersect(BVHRay& ray) const {
     int16_t stackPtr = 0;
     std::array<uint, getMaxDepth()> stack;
     stack[stackPtr] = m_rootIndex;
 
-    for (;stackPtr >= 0;) {
+    for (; stackPtr >= 0;) {
         const BVHNode& node = m_nodes[stack[stackPtr--]];
 
         if (node.isLeaf()) {
@@ -175,7 +171,6 @@ void BuildVH::intersect(BVHRay& ray) const {
             float t0 = intersectAABB(ray, lChild.bounds.aabbMin, lChild.bounds.aabbMax);
             float t1 = intersectAABB(ray, rChild.bounds.aabbMin, rChild.bounds.aabbMax);
 
-
             if (t0 > t1) {
                 std::swap(t0, t1);
                 std::swap(nodeIdx0, nodeIdx1);
@@ -192,13 +187,8 @@ void BuildVH::intersect(BVHRay& ray) const {
     }
 }
 
-void BuildVH::buildBVH() {
+void BVH::buildBVH() {
     m_nodes.resize(m_mesh->triangles.size() * 2 - 1);
-
-    for (int i = 0; i < m_mesh->triangles.size(); ++i) {
-        auto& [v0, v1, v2, centroid] = m_mesh->triangles[i];
-        centroid = (v0 + v1 + v2) / 3.f;
-    }
 
     BVHNode& root = m_nodes[m_numNodes++];
     root.leftFirst = 0;
@@ -221,7 +211,7 @@ void BuildVH::buildBVH() {
     }
 }
 
-void BuildVH::updateNodeBounds(BVHNode& node) {
+void BVH::updateNodeBounds(BVHNode& node) {
     for (auto triIdx : node.getTriangleIndices()) {
         const auto& [v0, v1, v2, centroid] = getTriangle(triIdx);
         node.bounds.extend(v0);
@@ -230,23 +220,24 @@ void BuildVH::updateNodeBounds(BVHNode& node) {
     }
 }
 
-std::pair<BVHNode&, BVHNode&> BuildVH::makeNewLeaves(BVHNode& node, uint splitTriIdx) {
-        auto lIdx = m_numNodes++;
-        auto rIdx = m_numNodes++;
-        BVHNode& lChild = m_nodes[lIdx];
-        BVHNode& rChild = m_nodes[rIdx];
+std::pair<BVHNode&, BVHNode&> BVH::makeNewLeaves(BVHNode& node, uint splitTriIdx) {
+    auto lIdx = m_numNodes++;
+    auto rIdx = m_numNodes++;
+    BVHNode& lChild = m_nodes[lIdx];
+    BVHNode& rChild = m_nodes[rIdx];
 
-        splitNode(node, lChild, rChild, splitTriIdx);
-        
-        updateNodeWithLeft(node, lIdx);
-        
-        updateNodeBounds(lChild);
-        updateNodeBounds(rChild);
+    splitNode(node, lChild, rChild, splitTriIdx);
 
-        return {lChild, rChild};
+    updateNodeWithLeft(node, lIdx);
+
+    updateNodeBounds(lChild);
+    updateNodeBounds(rChild);
+
+    return {lChild, rChild};
 }
 
-[[nodiscard]] std::optional<uint> BuildVH::findSplitTriIndex(BVHNode& node, uint axis, float splitPos) {
+[[nodiscard]] std::optional<uint> BVH::findSplitTriIndex(BVHNode& node, uint axis,
+                                                             float splitPos) {
     auto triL = node.leftFirst;
     auto triR = node.leftFirst + node.triCount;
     for (; triL != triR;) {
@@ -266,14 +257,15 @@ std::pair<BVHNode&, BVHNode&> BuildVH::makeNewLeaves(BVHNode& node, uint splitTr
     return std::nullopt;
 }
 
-void BuildVH::subdivide(BVHNode& node, uint depth) {
+void BVH::subdivide(BVHNode& node, uint depth) {
     if (node.triCount <= 1 || depth >= getMaxDepth()) {
         return;
     }
 
     BestSplitData bestSplit = findBestSplit(node);
 
-    if (node.bounds.aabbMin[bestSplit.axis] < bestSplit.splitPos && bestSplit.splitPos < node.bounds.aabbMax[bestSplit.axis]) {
+    if (node.bounds.aabbMin[bestSplit.axis] < bestSplit.splitPos &&
+        bestSplit.splitPos < node.bounds.aabbMax[bestSplit.axis]) {
         if (auto triL = findSplitTriIndex(node, bestSplit.axis, bestSplit.splitPos)) {
             auto [leftChild, rightChild] = makeNewLeaves(node, triL.value());
             static_assert(std::is_same_v<decltype(leftChild), BVHNode&>);
@@ -282,7 +274,7 @@ void BuildVH::subdivide(BVHNode& node, uint depth) {
             subdivide(leftChild, depth + 1);
             subdivide(rightChild, depth + 1);
         }
-    }   
+    }
 }
 
 }  // namespace RayTracer

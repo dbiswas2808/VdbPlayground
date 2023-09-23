@@ -67,7 +67,7 @@ TEST_CASE("BuildVH") {
         mesh.triangles.push_back({v24, v25, v26, (v24 + v25 + v26) / 3});
         mesh.triangles.push_back({v27, v28, v29, (v27 + v28 + v29) / 3});
 
-        BuildVH bvh(std::make_shared<BVHMesh>(mesh));
+        BVH bvh{cow<BVHMesh>(mesh)};
         CHECK_NOTHROW(bvh.buildBVH());
     }
 
@@ -94,7 +94,7 @@ TEST_CASE("BuildVH") {
         Eigen::Vector3f v11(2, 6, 0);
         mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
 
-        BuildVH bvh(std::make_shared<BVHMesh>(mesh));
+        BVH bvh {cow<BVHMesh>(mesh)};
         CHECK_NOTHROW(bvh.buildBVH());
 
         for (const auto& tri : mesh.triangles) {

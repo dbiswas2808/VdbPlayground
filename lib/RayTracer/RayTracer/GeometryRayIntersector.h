@@ -82,7 +82,7 @@ class TriMeshIntersector {
    public:
     TriMeshIntersector(std::span<const Eigen::Vector3f> triangleSoup, Eigen::Affine3f worldFromGeom,
                        Material material)
-        : bvh(std::make_shared<BVHMesh>(BVHMesh::makeMesh(triangleSoup))),
+        : bvh(cow<BVHMesh>(BVHMesh::makeMesh(triangleSoup))),
           m_worldFromGeom(worldFromGeom),
           m_geomFromWorld(worldFromGeom.inverse()),
           m_material(material) {
@@ -112,7 +112,7 @@ class TriMeshIntersector {
    private:
     Eigen::Affine3f m_worldFromGeom;
     Eigen::Affine3f m_geomFromWorld;
-    BuildVH bvh;
+    BVH bvh;
     Material m_material;
 };
 

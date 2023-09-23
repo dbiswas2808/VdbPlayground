@@ -15,6 +15,7 @@ class TestProject(ConanFile):
         self.requires("jemalloc/5.3.0")
         self.requires("assimp/5.2.2")
         self.requires("catch2/3.3.2")
+        self.requires("stlab/1.7.1")
 
     def build(self):
         cmake = CMake(self)

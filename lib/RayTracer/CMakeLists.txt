@@ -3,11 +3,13 @@ cmake_minimum_required(VERSION 3.15)
 find_package(PNG REQUIRED)
 # ...
 find_package(TBB REQUIRED)
+find_package(stlab REQUIRED)
 
 include_directories(${PNG_INCLUDE_DIRS})
 
 add_library(RayTracer
 RayTracer/Bvh.h
+RayTracer/Common.h
 RayTracer/Film.h
 RayTracer/Geometry.h
 RayTracer/GeometryRayIntersector.h
@@ -18,6 +20,7 @@ RayTracer/RayTracer.h
 RayTracer/Scene.h
 RayTracer/SceneEntity.h
 RayTracer/Bvh.cpp
+RayTracer/Common.cpp
 RayTracer/Film.cpp
 RayTracer/Geometry.cpp
 RayTracer/GeometryRayIntersector.cpp
@@ -40,6 +43,7 @@ target_link_libraries(
     Eigen3::Eigen
     ${PNG_LIBRARIES}
     TBB::tbb
+    stlab::stlab
 )
 
 message(STATUS "PNG_INCLUDE_DIRS: ${PNG_INCLUDE_DIRS}")
@@ -52,6 +56,7 @@ target_include_directories(RayTracer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 add_executable(RayTracerTest 
     RayTracer/Bvh.t.cpp
+    RayTracer/Common.t.cpp
     RayTracer/Film.t.cpp
     RayTracer/Geometry.t.cpp
     RayTracer/Light.t.cpp
