@@ -9,9 +9,8 @@ namespace {
 }
 }  // namespace
 
-TEST_CASE("BuildVH") {
+TEST_CASE("BVH") {
     using namespace RayTracer;
-    using namespace Eigen;
 
     SECTION("Build bvh") {
         const Eigen::Vector3f v0(0, 0, 0);
@@ -113,6 +112,109 @@ TEST_CASE("BuildVH") {
                    Eigen::Vector3f(std::numeric_limits<float>::infinity(),
                                    std::numeric_limits<float>::infinity(), -1)};
         bvh.intersect(ray);
+        CHECK(not ray.hasIntersection());
+    }
+}
+
+TEST_CASE("BVHInstance") {
+    using namespace RayTracer;
+    SECTION("4 triangles") {
+        BVHMesh mesh;
+
+        Eigen::Vector3f v0(-2, -6, -1);
+        Eigen::Vector3f v1(-2, -3, 0);
+        Eigen::Vector3f v2(-4, -3, 0);
+        mesh.triangles.push_back({v0, v1, v2, (v0 + v1 + v2) / 3});
+
+        Eigen::Vector3f v3(-2, 3, -2);
+        Eigen::Vector3f v4(-2, 6, 0);
+        Eigen::Vector3f v5(-4, 6, 0);
+        mesh.triangles.push_back({v3, v4, v5, (v3 + v4 + v5) / 3});
+
+        Eigen::Vector3f v6(2, -6, 0);
+        Eigen::Vector3f v7(2, -3, 0);
+        Eigen::Vector3f v8(1, -3, 0);
+        mesh.triangles.push_back({v6, v7, v8, (v6 + v7 + v8) / 3});
+
+        Eigen::Vector3f v9(4, 3, 0);
+        Eigen::Vector3f v10(4, 6, 0);
+        Eigen::Vector3f v11(2, 6, 0);
+        mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
+
+        cow<BVH> bvh {cow<BVHMesh>(mesh)};
+        CHECK_NOTHROW(bvh.write().buildBVH());
+
+        BVHInstance bvhInstance{bvh, Eigen::Affine3f(Eigen::Translation3f(0, 0, -1))};
+
+        for (const auto& tri : mesh.triangles) {
+            const auto& pt = tri.centroid;
+            const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+            BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
+                       Eigen::Vector3f(std::numeric_limits<float>::infinity(),
+                                       std::numeric_limits<float>::infinity(), -1)};
+            bvh.read().intersect(ray);
+            CHECK(ray.hasIntersection());
+            CHECK((ray.getIntersect() - pt).squaredNorm() < epsilon_mm<float>);
+            CHECK((ray.normal - n).squaredNorm() < epsilon_mm<float>);
+        }
+
+        BVHRay ray{Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
+                   Eigen::Vector3f(std::numeric_limits<float>::infinity(),
+                                   std::numeric_limits<float>::infinity(), -1)};
+        bvhInstance.intersect(ray);
+        CHECK(not ray.hasIntersection());
+    }
+}
+
+TEST_CASE("TLAS") {
+    SECTION("4 Triangles") {
+        using namespace RayTracer;
+        BVHMesh mesh;
+
+        Eigen::Vector3f v0(-2, -6, -1);
+        Eigen::Vector3f v1(-2, -3, 0);
+        Eigen::Vector3f v2(-4, -3, 0);
+        mesh.triangles.push_back({v0, v1, v2, (v0 + v1 + v2) / 3});
+
+        Eigen::Vector3f v3(-2, 3, -2);
+        Eigen::Vector3f v4(-2, 6, 0);
+        Eigen::Vector3f v5(-4, 6, 0);
+        mesh.triangles.push_back({v3, v4, v5, (v3 + v4 + v5) / 3});
+
+        Eigen::Vector3f v6(2, -6, 0);
+        Eigen::Vector3f v7(2, -3, 0);
+        Eigen::Vector3f v8(1, -3, 0);
+        mesh.triangles.push_back({v6, v7, v8, (v6 + v7 + v8) / 3});
+
+        Eigen::Vector3f v9(4, 3, 0);
+        Eigen::Vector3f v10(4, 6, 0);
+        Eigen::Vector3f v11(2, 6, 0);
+        mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
+
+        cow<BVH> bvh {cow<BVHMesh>(mesh)};
+        CHECK_NOTHROW(bvh.write().buildBVH());
+
+        BVHInstance bvhInstance{bvh, Eigen::Affine3f(Eigen::Translation3f(0, 0, -1))};
+
+        TLAS tlas{{bvhInstance}};
+        tlas.build();
+
+        for (const auto& tri : mesh.triangles) {
+            const auto& pt = Eigen::Translation3f(0, 0, -1) * tri.centroid;
+            const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+            BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
+                       Eigen::Vector3f(std::numeric_limits<float>::infinity(),
+                                       std::numeric_limits<float>::infinity(), -1)};
+            tlas.intersect(ray);
+            CHECK(ray.hasIntersection());
+            CHECK((ray.getIntersect() - pt).squaredNorm() < epsilon_mm<float>);
+            CHECK((ray.normal - n).squaredNorm() < epsilon_mm<float>);
+        }
+
+        BVHRay ray{Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
+                   Eigen::Vector3f(std::numeric_limits<float>::infinity(),
+                                   std::numeric_limits<float>::infinity(), -1)};
+        tlas.intersect(ray);
         CHECK(not ray.hasIntersection());
     }
 }

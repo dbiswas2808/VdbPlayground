@@ -17,6 +17,11 @@ struct AABB {
         aabbMax = aabbMax.cwiseMax(point);
     }
 
+    void extend(const AABB& other) {
+        aabbMin = aabbMin.cwiseMin(other.aabbMin);
+        aabbMax = aabbMax.cwiseMax(other.aabbMax);
+    }
+
     [[nodiscard]] bool isEmpty() const {
         return aabbMin.x() > aabbMax.x() || aabbMin.y() > aabbMax.y() || aabbMin.z() > aabbMax.z();
     }
@@ -104,6 +109,10 @@ class BVH {
 
     void buildBVH();
 
+    [[nodiscard]] const BVHMesh& getMesh() const { return *m_mesh; }
+
+    [[nodiscard]] const BVHNode& getRoot() const { return m_nodes[m_rootIndex]; }
+
    private:
     [[nodiscard]] const BVHMesh::Triangle& getTriangle(uint triIdx) const {
         return m_mesh->triangles[m_triIdx[triIdx]];
@@ -133,11 +142,50 @@ class BVH {
 
 class BVHInstance {
    public:
-    BVHInstance(cow<const BVH> bvh) : m_bvh(std::move(bvh)){};
+    BVHInstance(cow<BVH> bvh, Eigen::Affine3f worldFromGeom)
+        : m_bvh(std::move(bvh)),
+          m_worldFromGeom(worldFromGeom),
+          m_geomFromWorld(worldFromGeom.inverse()) {
+        auto bbox = m_bvh.read().getRoot().bounds;
+        for (int i = 0; i < 8; i++) {
+            aabb.extend(m_worldFromGeom *
+                        Eigen::Vector3f(i & 0b100 ? bbox.aabbMax[0] : bbox.aabbMin[0],
+                                        i & 0b010 ? bbox.aabbMax[1] : bbox.aabbMin[1],
+                                        i & 0b001 ? bbox.aabbMax[2] : bbox.aabbMin[2]));
+        }
+    };
+    void intersect(BVHRay& ray) const;
+    [[nodiscard]] const AABB& getAABB() const { return aabb; }
 
    private:
-    cow<const BVH> m_bvh;
+    cow<BVH> m_bvh;
     Eigen::Affine3f m_worldFromGeom;
     Eigen::Affine3f m_geomFromWorld;
+    AABB aabb;
+};
+
+struct TLASNode {
+    AABB bounds;
+    uint leftRight;  // If leaf level this is the first triangle index, otherwise it is the index of
+                     // the left child
+    uint bvhIdx;
+    bool isLeaf() const {
+        return leftRight == 0;
+    }
+};
+
+
+class TLAS {
+   public:
+    TLAS(std::vector<BVHInstance> bvhInstances);
+    void build();
+    void intersect(BVHRay& ray) const;
+
+   private:
+    [[nodiscard]] int findBestMatch(std::span<const int> TLASNodes, int nodeA) const;
+
+    std::vector<TLASNode> m_tlasNode;
+    std::vector<BVHInstance> m_bvhInstances;
+    AABB m_aabb;
 };
 }  // namespace VdbFields::RayTracer

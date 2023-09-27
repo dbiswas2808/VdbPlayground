@@ -277,5 +277,118 @@ void BVH::subdivide(BVHNode& node, uint depth) {
     }
 }
 
+void BVHInstance::intersect(BVHRay& ray) const {
+    auto ray_geom = BVHRay {
+        .origin =m_geomFromWorld * ray.origin,
+        .direction = m_geomFromWorld.rotation() * ray.direction,
+        .invDirection = Eigen::Vector3f(),
+        .normal = m_geomFromWorld.rotation().transpose().inverse() * ray.normal,
+        .t = ray.t
+    };
+
+    ray_geom.invDirection = ray_geom.direction.cwiseInverse();
+
+    m_bvh->intersect(ray_geom);
+    ray.t = ray_geom.t;
+    ray.normal =  m_worldFromGeom.rotation().transpose().inverse() * ray_geom.normal;
+}
+
+TLAS::TLAS(std::vector<BVHInstance> bvhInstance) : m_bvhInstances(std::move(bvhInstance)) {
+}
+
+[[nodiscard]] int TLAS::findBestMatch(std::span<const int> tlasNodes,
+                                      int a) const {
+    float smallestSurfaceArea_mm2 = std::numeric_limits<float>::infinity();
+    int bestB = -1;
+
+    int b = 0;
+    for (int nodeIdx : tlasNodes) {
+        auto bbox = m_tlasNode[tlasNodes[a]].bounds;
+        bbox.extend(m_tlasNode[nodeIdx].bounds);
+        auto primDiagonal = (bbox.aabbMax - bbox.aabbMin);
+        float surfaceArea_mm2 = bbox.area();
+        if (surfaceArea_mm2 < smallestSurfaceArea_mm2) {
+            smallestSurfaceArea_mm2 = surfaceArea_mm2;
+            bestB = b++;
+        }
+    }
+
+    return bestB;
+}
+
+void TLAS::build() {
+    // assign a TLASleaf node to each BLAS
+    std::vector<int> nodesIdx(m_bvhInstances.size());
+    m_tlasNode.resize(2 * m_bvhInstances.size());
+    size_t nodesUsed = 1;
+    for (size_t ii = 0; ii < m_bvhInstances.size(); ii++) {
+        nodesIdx[ii] = nodesUsed;
+        m_tlasNode[nodesUsed].bounds = m_bvhInstances[ii].getAABB();
+        m_tlasNode[nodesUsed].bvhIdx = ii;
+        m_tlasNode[nodesUsed++].leftRight = 0;  // makes it a leaf
+    }
+
+    auto numLeafNodes = m_bvhInstances.size();
+    auto makeClusterNode = [this](const TLASNode& nodeA, int nodeIdxA, const TLASNode& nodeB,
+                                  int nodeIdxB, int nodeIndices) {
+        // Make new node
+        TLASNode& newNode = m_tlasNode[nodeIndices];
+        newNode.leftRight = nodeIdxA + (nodeIdxB << 16);
+        newNode.bounds = nodeA.bounds;
+        newNode.bounds.extend(nodeB.bounds.aabbMin);
+        newNode.bounds.extend(nodeB.bounds.aabbMax);
+    };
+
+    int a = 0;
+    int b = findBestMatch(nodesIdx, a);
+    for (; numLeafNodes > 1;) {
+        int c = findBestMatch(std::span(nodesIdx.begin(), numLeafNodes), b);
+        if (a == c) {
+            int nodeIdxA = nodesIdx[a];
+            int nodeIdxB = nodesIdx[b];
+            TLASNode& nodeA = m_tlasNode[nodeIdxA];
+            TLASNode& nodeB = m_tlasNode[nodeIdxB];
+            makeClusterNode(nodeA, nodeIdxA, nodeB, nodeIdxB, nodesUsed);
+            nodesIdx[a] = nodesUsed++; // This is the new merged node Idx
+            nodesIdx[b] = nodesIdx[--numLeafNodes]; // Swap the last leaf node into the b position
+            b = findBestMatch(std::span(nodesIdx.begin(), numLeafNodes), a);
+        } else {
+            a = std::exchange(b, c);
+        };
+    }
+    m_tlasNode[0] = m_tlasNode[nodesIdx[a]];
+}
+
+void TLAS::intersect(BVHRay& ray) const {
+    std::array<TLASNode, 64> stack{m_tlasNode.front()};
+    int16_t stackPtr = 0;
+    for (;stackPtr >= 0;) {
+        const auto& node = stack[stackPtr--];
+        if (node.isLeaf()) {
+            m_bvhInstances[node.bvhIdx].intersect(ray);
+            --stackPtr;
+            continue;
+        }
+
+        auto child1 = m_tlasNode[node.leftRight & 0xFFFF];
+        auto child2 = m_tlasNode[node.leftRight >> 16];
+
+        auto t1 = intersectAABB(ray, child1.bounds.aabbMin, child1.bounds.aabbMax);
+        auto t2 = intersectAABB(ray, child2.bounds.aabbMin, child2.bounds.aabbMax);
+        if (t1 > t2) {
+            std::swap(t1, t2);
+            std::swap(child1, child2);
+        }
+
+        if (std::isfinite(t1)) {
+            stack[++stackPtr] = child1;
+            if (std::isfinite(t2)) {
+                stack[++stackPtr] = child2;
+            }
+        }
+    }
+}
+
+
 }  // namespace RayTracer
 }  // namespace VdbFields
