@@ -39,6 +39,10 @@ namespace {
     return std::numeric_limits<float>::infinity();
 }
 
+[[nodiscard]] Eigen::Matrix3f txInvTranspose(const Eigen::Affine3f& transform) {
+    return transform.rotation().transpose().inverse();
+}
+
 [[nodiscard]] Eigen::Vector3f normal(const Eigen::Vector3f& v0, const Eigen::Vector3f& v1,
                                      const Eigen::Vector3f& v2) {
     return (v2 - v1).cross(v0 - v1).normalized();
@@ -62,6 +66,7 @@ consteval uint getMaxDepth() {
 }  // namespace
 }  // namespace RayTracer
 
+// Free functions
 float RayTracer::intersectAABB(const BVHRay& ray, const Eigen::Vector3f& aabbMin,
                                const Eigen::Vector3f& aabbMax) {
     const Eigen::Vector3f& invDir = ray.invDirection;
@@ -86,6 +91,73 @@ float RayTracer::intersectAABB(const BVHRay& ray, const Eigen::Vector3f& aabbMin
 }
 
 namespace RayTracer {
+// AABB implementation
+void AABB::extend(const Eigen::Vector3f& point) {
+    aabbMin = aabbMin.cwiseMin(point);
+    aabbMax = aabbMax.cwiseMax(point);
+}
+
+void AABB::extend(const AABB& other) {
+    aabbMin = aabbMin.cwiseMin(other.aabbMin);
+    aabbMax = aabbMax.cwiseMax(other.aabbMax);
+}
+
+[[nodiscard]] bool AABB::isEmpty() const {
+    return aabbMin.x() > aabbMax.x() || aabbMin.y() > aabbMax.y() || aabbMin.z() > aabbMax.z();
+}
+
+[[nodiscard]] float AABB::area() const {
+    Eigen::Vector3f diff = aabbMax - aabbMin;
+    return isEmpty() ? 0 : 2 * (diff.x() * diff.y() + diff.x() * diff.z() + diff.y() * diff.z());
+}
+
+[[nodiscard]] bool AABB::contains(const Eigen::Vector3f& pt) const {
+    return pt.x() >= aabbMin.x() && pt.x() <= aabbMax.x() && pt.y() >= aabbMin.y() &&
+           pt.y() <= aabbMax.y() && pt.z() >= aabbMin.z() && pt.z() <= aabbMax.z();
+}
+
+AABB operator*(const Eigen::Affine3f& transform, const AABB& aabb) {
+    AABB result;
+    for (int ii = 0; ii < 8; ++ii) {
+        auto corner = Eigen::Vector3f(ii & 0b001 ? aabb.aabbMin[0] : aabb.aabbMax[0],
+                                      ii & 0b010 ? aabb.aabbMin[1] : aabb.aabbMax[1],
+                                      ii & 0b100 ? aabb.aabbMin[2] : aabb.aabbMax[2]);
+        result.extend(transform * corner);
+    }
+
+    return result;
+}
+
+BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
+    auto result = BVHRay {
+        .origin =transform * this->origin,
+        .direction = transform.rotation() * this->direction,
+        .invDirection = Eigen::Vector3f(),
+        .normal = txInvTranspose(transform) * this->normal,
+        .t = this->t
+    };
+
+    result.invDirection = result.direction.cwiseInverse();
+    return result;
+}
+
+// BVH mesh
+/*static*/ BVHMesh BVHMesh::makeMesh(std::span<const Eigen::Vector3f> triangleSoup) {
+    assert(triangleSoup.size() % 3 == 0);
+
+    std::vector<Triangle> result;
+
+    for (size_t ii = 0; ii < triangleSoup.size(); ii += 3) {
+        const Eigen::Vector3f& v0 = triangleSoup[ii];
+        const Eigen::Vector3f& v1 = triangleSoup[ii + 1];
+        const Eigen::Vector3f& v2 = triangleSoup[ii + 2];
+        result.push_back({v0, v1, v2, (v0 + v1 + v2) / 3});
+    }
+
+    return {std::move(result)};
+}
+
+// BVH implementation
 struct BVH::BestSplitData {
     float cost = std::numeric_limits<float>::infinity();
     uint axis;
@@ -277,22 +349,22 @@ void BVH::subdivide(BVHNode& node, uint depth) {
     }
 }
 
+
+// BVHInstance implementation
+BVHInstance::BVHInstance(cow<BVH> bvh, const Eigen::Affine3f& worldFromGeom)
+    : m_bvh(std::move(bvh)),
+      m_worldFromGeom(worldFromGeom),
+      m_geomFromWorld(worldFromGeom.inverse()),
+      m_aabb(m_worldFromGeom * m_bvh.read().getRoot().bounds){};
+
 void BVHInstance::intersect(BVHRay& ray) const {
-    auto ray_geom = BVHRay {
-        .origin =m_geomFromWorld * ray.origin,
-        .direction = m_geomFromWorld.rotation() * ray.direction,
-        .invDirection = Eigen::Vector3f(),
-        .normal = m_geomFromWorld.rotation().transpose().inverse() * ray.normal,
-        .t = ray.t
-    };
-
-    ray_geom.invDirection = ray_geom.direction.cwiseInverse();
-
+    auto ray_geom = ray.transform(m_geomFromWorld);
     m_bvh->intersect(ray_geom);
     ray.t = ray_geom.t;
     ray.normal =  m_worldFromGeom.rotation().transpose().inverse() * ray_geom.normal;
 }
 
+// TLAS implementation
 TLAS::TLAS(std::vector<BVHInstance> bvhInstance) : m_bvhInstances(std::move(bvhInstance)) {
 }
 
@@ -388,7 +460,5 @@ void TLAS::intersect(BVHRay& ray) const {
         }
     }
 }
-
-
 }  // namespace RayTracer
 }  // namespace VdbFields

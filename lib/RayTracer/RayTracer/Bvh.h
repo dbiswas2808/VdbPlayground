@@ -1,59 +1,21 @@
-#include <memory>
 #include <numeric>
 #include <ranges>
 #include <span>
 #include <Eigen/Geometry>
 #include <RayTracer/Common.h>
-#include <RayTracer/Geometry.h>
-#include <RayTracer/Ray.h>
 
 namespace VdbFields::RayTracer{
 struct AABB {
     Eigen::Vector3f aabbMin = Eigen::Vector3f::Constant(std::numeric_limits<float>::infinity());
     Eigen::Vector3f aabbMax = Eigen::Vector3f::Constant(-std::numeric_limits<float>::infinity());
 
-    void extend(const Eigen::Vector3f& point) {
-        aabbMin = aabbMin.cwiseMin(point);
-        aabbMax = aabbMax.cwiseMax(point);
-    }
+    void extend(const Eigen::Vector3f& point);
+    void extend(const AABB& other);
+    [[nodiscard]] bool isEmpty() const;
+    [[nodiscard]] float area() const;
+    [[nodiscard]] bool contains(const Eigen::Vector3f& pt) const;
 
-    void extend(const AABB& other) {
-        aabbMin = aabbMin.cwiseMin(other.aabbMin);
-        aabbMax = aabbMax.cwiseMax(other.aabbMax);
-    }
-
-    [[nodiscard]] bool isEmpty() const {
-        return aabbMin.x() > aabbMax.x() || aabbMin.y() > aabbMax.y() || aabbMin.z() > aabbMax.z();
-    }
-
-    [[nodiscard]] float area() const {
-        Eigen::Vector3f diff = aabbMax - aabbMin;
-        return isEmpty() ? 0 : 2 * (diff.x() * diff.y() + diff.x() * diff.z() + diff.y() * diff.z());
-    }
-
-    [[nodiscard]] bool contains(const Eigen::Vector3f& pt) const {
-        return pt.x() >= aabbMin.x() && pt.x() <= aabbMax.x() && pt.y() >= aabbMin.y() &&
-               pt.y() <= aabbMax.y() && pt.z() >= aabbMin.z() && pt.z() <= aabbMax.z();
-    }
-};
-
-struct BVHNode {
-    AABB bounds;
-    uint leftFirst;  // If leaf level this is the first triangle index, otherwise it is the index of
-                     // the left child
-    uint triCount;
-
-    [[nodiscard]] std::ranges::iota_view<uint, uint> getTriangleIndices() const {
-        return std::ranges::iota_view(leftFirst, leftFirst + triCount);
-    }
-
-    [[nodiscard]] bool contains(const Eigen::Vector3f& pt) const {
-        return bounds.contains(pt);
-    }
-
-    [[nodiscard]] bool isValidNode() const { return triCount > 0 || leftFirst > 0; }
-
-    [[nodiscard]] bool isLeaf() const { return triCount > 0; }
+    [[nodiscard]] friend AABB operator*(const Eigen::Affine3f& transform, const AABB& aabb);
 };
 
 struct BVHRay {
@@ -62,6 +24,8 @@ struct BVHRay {
     Eigen::Vector3f invDirection;
     Eigen::Vector3f normal;
     float t = std::numeric_limits<float>::infinity();
+
+    [[nodiscard]] BVHRay transform(const Eigen::Affine3f& transform) const;
 
     [[nodiscard]] bool hasIntersection() const {
         return t < std::numeric_limits<float>::infinity();
@@ -82,20 +46,27 @@ struct BVHMesh {
 
     std::vector<Triangle> triangles;
 
-    [[nodiscard]] static BVHMesh makeMesh(std::span<const Eigen::Vector3f> triangleSoup) {
-        assert(triangleSoup.size() % 3 == 0);
+    [[nodiscard]] static BVHMesh makeMesh(std::span<const Eigen::Vector3f> triangleSoup);
+};
 
-        std::vector<Triangle> result;
 
-        for (size_t ii = 0; ii < triangleSoup.size(); ii += 3) {
-            Eigen::Vector3f v0 = triangleSoup[ii];
-            Eigen::Vector3f v1 = triangleSoup[ii + 1];
-            Eigen::Vector3f v2 = triangleSoup[ii + 2];
-            result.push_back({v0, v1, v2, (v0 + v1 + v2) / 3});
-        }
+struct BVHNode {
+    AABB bounds;
+    uint leftFirst;  // If leaf level this is the first triangle index, otherwise it is the index of
+                     // the left child
+    uint triCount;
 
-        return {std::move(result)};
+    [[nodiscard]] std::ranges::iota_view<uint, uint> getTriangleIndices() const {
+        return std::ranges::iota_view(leftFirst, leftFirst + triCount);
     }
+
+    [[nodiscard]] bool contains(const Eigen::Vector3f& pt) const {
+        return bounds.contains(pt);
+    }
+
+    [[nodiscard]] bool isValidNode() const { return triCount > 0 || leftFirst > 0; }
+
+    [[nodiscard]] bool isLeaf() const { return triCount > 0; }
 };
 
 class BVH {
@@ -142,26 +113,15 @@ class BVH {
 
 class BVHInstance {
    public:
-    BVHInstance(cow<BVH> bvh, Eigen::Affine3f worldFromGeom)
-        : m_bvh(std::move(bvh)),
-          m_worldFromGeom(worldFromGeom),
-          m_geomFromWorld(worldFromGeom.inverse()) {
-        auto bbox = m_bvh.read().getRoot().bounds;
-        for (int i = 0; i < 8; i++) {
-            aabb.extend(m_worldFromGeom *
-                        Eigen::Vector3f(i & 0b100 ? bbox.aabbMax[0] : bbox.aabbMin[0],
-                                        i & 0b010 ? bbox.aabbMax[1] : bbox.aabbMin[1],
-                                        i & 0b001 ? bbox.aabbMax[2] : bbox.aabbMin[2]));
-        }
-    };
+    BVHInstance(cow<BVH> bvh, const Eigen::Affine3f& worldFromGeom);
     void intersect(BVHRay& ray) const;
-    [[nodiscard]] const AABB& getAABB() const { return aabb; }
+    [[nodiscard]] const AABB& getAABB() const { return m_aabb; }
 
    private:
     cow<BVH> m_bvh;
     Eigen::Affine3f m_worldFromGeom;
     Eigen::Affine3f m_geomFromWorld;
-    AABB aabb;
+    AABB m_aabb;
 };
 
 struct TLASNode {
