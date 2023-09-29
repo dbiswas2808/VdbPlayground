@@ -194,21 +194,35 @@ TEST_CASE("TLAS") {
         cow<BVH> bvh {cow<BVHMesh>(mesh)};
         CHECK_NOTHROW(bvh.write().buildBVH());
 
-        BVHInstance bvhInstance{bvh, Eigen::Affine3f(Eigen::Translation3f(0, 0, -1))};
+        std::array<Eigen::Translation3f, 4> txs{
+            Eigen::Translation3f(0, 0, -1), Eigen::Translation3f(12.1, 0, -1),
+            Eigen::Translation3f(0, -14.1, -1), Eigen::Translation3f(0, 14.1, -1)};
 
-        TLAS tlas{{bvhInstance}};
+        BVHInstance bvhInstance0{bvh, Eigen::Affine3f(txs[0])};
+        BVHInstance bvhInstance1{bvh, Eigen::Affine3f(txs[1])};
+        BVHInstance bvhInstance2{bvh, Eigen::Affine3f(txs[2])};
+        BVHInstance bvhInstance3{bvh, Eigen::Affine3f(txs[3])};
+
+        BVHInstance bvhInstance4{bvh, Eigen::Translation3f(0, 0, -2) * Eigen::Affine3f(txs[0])};
+        BVHInstance bvhInstance5{bvh, Eigen::Translation3f(0, 0, -2) * Eigen::Affine3f(txs[1])};
+        BVHInstance bvhInstance6{bvh, Eigen::Translation3f(0, 0, -2) * Eigen::Affine3f(txs[2])};
+        BVHInstance bvhInstance7{bvh, Eigen::Translation3f(0, 0, -2) * Eigen::Affine3f(txs[3])};
+
+        TLAS tlas{{bvhInstance0, bvhInstance1, bvhInstance2, bvhInstance3, bvhInstance4,
+                   bvhInstance5, bvhInstance6, bvhInstance7}};
         tlas.build();
-
-        for (const auto& tri : mesh.triangles) {
-            const auto& pt = Eigen::Translation3f(0, 0, -1) * tri.centroid;
-            const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
-            BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
-                       Eigen::Vector3f(std::numeric_limits<float>::infinity(),
-                                       std::numeric_limits<float>::infinity(), -1)};
-            tlas.intersect(ray);
-            CHECK(ray.hasIntersection());
-            CHECK((ray.getIntersect() - pt).squaredNorm() < epsilon_mm<float>);
-            CHECK((ray.normal - n).squaredNorm() < epsilon_mm<float>);
+        for (auto tx : txs) {
+            for (const auto& tri : mesh.triangles) {
+                const Eigen::Vector3f& pt = tx * tri.centroid;
+                const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+                BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
+                           Eigen::Vector3f(std::numeric_limits<float>::infinity(),
+                                           std::numeric_limits<float>::infinity(), -1)};
+                tlas.intersect(ray);
+                CHECK(ray.hasIntersection());
+                CHECK((ray.getIntersect() - pt).squaredNorm() < std::pow(epsilon_mm<float>, 2));
+                CHECK((ray.normal - n).squaredNorm() < std::pow(epsilon_mm<float>, 2));
+            }
         }
 
         BVHRay ray{Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),

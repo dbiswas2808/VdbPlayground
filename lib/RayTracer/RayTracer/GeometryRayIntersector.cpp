@@ -55,6 +55,26 @@ std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray_world) c
                         .brdf = m_material.getBRDF(intersectionPt_world)};
 }
 
+std::optional<RayIntersect> TriMeshIntersector::intersect(const Ray& ray) const {
+    auto ray_geom = ray.transform(m_geomFromWorld);
+
+    BVHRay bvhRay_geom = {.origin = ray_geom.origin,
+                          .direction = (m_geomFromWorld.rotation() * ray.direction).eval(),
+                          .invDirection = ray.direction.cwiseInverse()};
+    bvh.intersect(bvhRay_geom);
+    if (bvhRay_geom.hasIntersection()) {
+        const auto intersectionPt_world =
+            m_worldFromGeom * (bvhRay_geom.origin + bvhRay_geom.t * bvhRay_geom.direction);
+        const auto normal_world =
+            m_worldFromGeom.rotation().transpose().inverse() * bvhRay_geom.normal;
+        return RayIntersect{.point_world = intersectionPt_world,
+                            .hitT_mm = bvhRay_geom.t,
+                            .normal_world = normal_world,
+                            .brdf = m_material.getBRDF(intersectionPt_world)};
+    }
+    return std::nullopt;
+}
+
 std::optional<RayIntersect> AggregratePrimitiveIntersector::intersect(const Ray& ray_world) const {
     std::optional<RayIntersect> closestIntersect;
 

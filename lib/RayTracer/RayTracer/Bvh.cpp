@@ -368,20 +368,23 @@ void BVHInstance::intersect(BVHRay& ray) const {
 TLAS::TLAS(std::vector<BVHInstance> bvhInstance) : m_bvhInstances(std::move(bvhInstance)) {
 }
 
-[[nodiscard]] int TLAS::findBestMatch(std::span<const int> tlasNodes,
+[[nodiscard]] int TLAS::findBestMatch(std::span<const int> nodeIdices,
                                       int a) const {
     float smallestSurfaceArea_mm2 = std::numeric_limits<float>::infinity();
     int bestB = -1;
 
-    int b = 0;
-    for (int nodeIdx : tlasNodes) {
-        auto bbox = m_tlasNode[tlasNodes[a]].bounds;
-        bbox.extend(m_tlasNode[nodeIdx].bounds);
+    for (int b = 0; b < nodeIdices.size(); ++b) {
+        if (a == b) {
+            continue;
+        }
+
+        auto bbox = m_tlasNode[nodeIdices[a]].bounds;
+        bbox.extend(m_tlasNode[nodeIdices[b]].bounds);
         auto primDiagonal = (bbox.aabbMax - bbox.aabbMin);
         float surfaceArea_mm2 = bbox.area();
         if (surfaceArea_mm2 < smallestSurfaceArea_mm2) {
             smallestSurfaceArea_mm2 = surfaceArea_mm2;
-            bestB = b++;
+            bestB = b;
         }
     }
 
@@ -437,8 +440,9 @@ void TLAS::intersect(BVHRay& ray) const {
     for (;stackPtr >= 0;) {
         const auto& node = stack[stackPtr--];
         if (node.isLeaf()) {
+            auto  tempT = ray.t;
             m_bvhInstances[node.bvhIdx].intersect(ray);
-            --stackPtr;
+            assert(tempT >= ray.t);
             continue;
         }
 

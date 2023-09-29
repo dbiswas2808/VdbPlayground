@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+
 #include <RayTracer/Bvh.h>
 #include <RayTracer/Geometry.h>
 #include <RayTracer/Ray.h>
@@ -24,7 +25,8 @@ class ShapeIntersector {
 
         Model(const Model& other) = delete;
 
-        [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const final {
+        [[nodiscard]] virtual std::optional<RayIntersect> intersect(
+            const Ray& ray_world) const final {
             return m_t.intersect(ray_world);
         }
 
@@ -48,8 +50,7 @@ class ShapeIntersector {
                                                            std::forward<Args>(args)...));
     }
 
-    ShapeIntersector(const ShapeIntersector& other)
-        : m_intersector(other.m_intersector->clone()) {}
+    ShapeIntersector(const ShapeIntersector& other) : m_intersector(other.m_intersector->clone()) {}
     ShapeIntersector(ShapeIntersector&& other) : m_intersector(std::move(other.m_intersector)) {}
 
     [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const {
@@ -86,25 +87,11 @@ class TriMeshIntersector {
           m_worldFromGeom(worldFromGeom),
           m_geomFromWorld(worldFromGeom.inverse()),
           m_material(material) {
-            bvh.buildBVH();
-          }
-
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final {
-        BVHRay ray_local = {.origin = (m_geomFromWorld * ray.origin).eval(),
-                            .direction = (m_geomFromWorld.rotation() * ray.direction).eval(),
-                            .invDirection = ray.direction.cwiseInverse()};
-        bvh.intersect(ray_local);
-        if (ray_local.hasIntersection()) {
-            const auto intersectionPt_world =
-                m_worldFromGeom * (ray_local.origin + ray_local.t * ray_local.direction);
-            const auto normal_world = m_worldFromGeom.rotation().transpose().inverse() * ray_local.normal;
-            return RayIntersect{.point_world = intersectionPt_world,
-                                .hitT_mm = ray_local.t,
-                                .normal_world = normal_world,
-                                .brdf = m_material.getBRDF(intersectionPt_world)};
-        }
-        return std::nullopt;
+        bvh.buildBVH();
     }
+
+    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
+
     [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final {
         return static_cast<bool>(intersect(ray));
     }
