@@ -3,6 +3,10 @@
 namespace VdbFields {
 namespace RayTracer {
 namespace {
+inline Eigen::Matrix3f normalMatrix(const Eigen::Affine3f& worldFromGeom) {
+    return worldFromGeom.rotation().transpose().inverse();
+}
+
 [[nodiscard]] float intersectTriangle(const BVHRay& ray, const Eigen::Vector3f& v0,
                                       const Eigen::Vector3f& v1, const Eigen::Vector3f& v2) {
     Eigen::Vector3f e1 = v1 - v0;
@@ -142,19 +146,26 @@ BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
 }
 
 // BVH mesh
-/*static*/ BVHMesh BVHMesh::makeMesh(std::span<const Eigen::Vector3f> triangleSoup) {
+/*static*/ BVHMesh BVHMesh::makeMesh(std::span<const Eigen::Vector3f> triangleSoup,
+                                     std::span<const Eigen::Vector3f> normals,
+                                     std::span<const Eigen::Vector2f> texUvs) {
     assert(triangleSoup.size() % 3 == 0);
+    assert(normals.size() == triangleSoup.size());
+    assert(texUv.size() == triangleSoup.size());
 
     std::vector<Triangle> result;
+    std::vector<TriEx> triData;
 
     for (size_t ii = 0; ii < triangleSoup.size(); ii += 3) {
         const Eigen::Vector3f& v0 = triangleSoup[ii];
         const Eigen::Vector3f& v1 = triangleSoup[ii + 1];
         const Eigen::Vector3f& v2 = triangleSoup[ii + 2];
         result.push_back({v0, v1, v2, (v0 + v1 + v2) / 3});
+        triData.push_back(TriEx{std::array{texUvs[ii], texUvs[ii + 1], texUvs[ii + 2]},
+                                std::array{normals[ii], normals[ii + 1], normals[ii + 2]}});
     }
 
-    return {std::move(result)};
+    return {std::move(result), std::move(triData)};
 }
 
 // BVH implementation
@@ -197,9 +208,9 @@ float BVH::evaluateSAH(const BVHNode& node, uint axis, float splitPos) const {
     size_t triCountR = 0;
 
     auto extend = [](AABB& aabb, const BVHMesh::Triangle& tri) {
-        aabb.extend(tri.v0);
-        aabb.extend(tri.v1);
-        aabb.extend(tri.v2);
+        aabb.extend(tri.vs[0]);
+        aabb.extend(tri.vs[1]);
+        aabb.extend(tri.vs[2]);
     };
 
     for (auto triIdx : node.getTriangleIndices()) {
@@ -227,10 +238,10 @@ void BVH::intersect(BVHRay& ray) const {
         if (node.isLeaf()) {
             // Leaf node
             for (uint i = 0; i < node.triCount; ++i) {
-                const auto& [v0, v1, v2, centroid] = getTriangle(node.leftFirst + i);
-                if (auto t = intersectTriangle(ray, v0, v1, v2); t < ray.t) {
+                const auto& [vs, centroid] = getTriangle(node.leftFirst + i);
+                if (auto t = intersectTriangle(ray, vs[0], vs[1], vs[2]); t < ray.t) {
                     ray.t = t;
-                    ray.normal = normal(v0, v1, v2);
+                    ray.normal = normal(vs[0], vs[1], vs[2]);
                 }
             }
         } else {
@@ -273,10 +284,10 @@ void BVH::buildBVH() {
     for (const auto& node : m_nodes) {
         if (node.isLeaf()) {
             for (auto ii : node.getTriangleIndices()) {
-                auto [v1, v2, v3, centroid] = getTriangle(ii);
-                assert(node.contains(v1));
-                assert(node.contains(v2));
-                assert(node.contains(v3));
+                const auto& [vs, centroid] = getTriangle(ii);
+                assert(node.contains(vs[0]));
+                assert(node.contains(vs[1]));
+                assert(node.contains(vs[2]));
                 assert(node.contains(centroid));
             }
         }
@@ -285,10 +296,10 @@ void BVH::buildBVH() {
 
 void BVH::updateNodeBounds(BVHNode& node) {
     for (auto triIdx : node.getTriangleIndices()) {
-        const auto& [v0, v1, v2, centroid] = getTriangle(triIdx);
-        node.bounds.extend(v0);
-        node.bounds.extend(v1);
-        node.bounds.extend(v2);
+        const auto& [vs, centroid] = getTriangle(triIdx);
+        node.bounds.extend(vs[0]);
+        node.bounds.extend(vs[1]);
+        node.bounds.extend(vs[2]);
     }
 }
 
@@ -313,8 +324,7 @@ std::pair<BVHNode&, BVHNode&> BVH::makeNewLeaves(BVHNode& node, uint splitTriIdx
     auto triL = node.leftFirst;
     auto triR = node.leftFirst + node.triCount;
     for (; triL != triR;) {
-        const auto& [v0, v1, v2, centroid] = getTriangle(triL);
-        if (centroid[axis] > splitPos) {
+        if (getTriangle(triL).centroid[axis] > splitPos) {
             std::swap(m_triIdx[triL], m_triIdx[--triR]);
         } else {
             triL++;
@@ -355,13 +365,13 @@ BVHInstance::BVHInstance(cow<BVH> bvh, const Eigen::Affine3f& worldFromGeom)
     : m_bvh(std::move(bvh)),
       m_worldFromGeom(worldFromGeom),
       m_geomFromWorld(worldFromGeom.inverse()),
-      m_aabb(m_worldFromGeom * m_bvh.read().getRoot().bounds){};
+      m_aabb_world(m_worldFromGeom * m_bvh.read().getRoot().bounds){};
 
-void BVHInstance::intersect(BVHRay& ray) const {
-    auto ray_geom = ray.transform(m_geomFromWorld);
+void BVHInstance::intersect(BVHRay& ray_world) const {
+    auto ray_geom = ray_world.transform(m_geomFromWorld);
     m_bvh->intersect(ray_geom);
-    ray.t = ray_geom.t;
-    ray.normal =  m_worldFromGeom.rotation().transpose().inverse() * ray_geom.normal;
+    ray_world.t = ray_geom.t;
+    ray_world.normal =  normalMatrix(m_worldFromGeom) * ray_geom.normal;
 }
 
 // TLAS implementation
@@ -378,8 +388,8 @@ TLAS::TLAS(std::vector<BVHInstance> bvhInstance) : m_bvhInstances(std::move(bvhI
             continue;
         }
 
-        auto bbox = m_tlasNode[nodeIdices[a]].bounds;
-        bbox.extend(m_tlasNode[nodeIdices[b]].bounds);
+        auto bbox = m_tlasNode[nodeIdices[a]].aabb_world;
+        bbox.extend(m_tlasNode[nodeIdices[b]].aabb_world);
         auto primDiagonal = (bbox.aabbMax - bbox.aabbMin);
         float surfaceArea_mm2 = bbox.area();
         if (surfaceArea_mm2 < smallestSurfaceArea_mm2) {
@@ -398,7 +408,7 @@ void TLAS::build() {
     size_t nodesUsed = 1;
     for (size_t ii = 0; ii < m_bvhInstances.size(); ii++) {
         nodesIdx[ii] = nodesUsed;
-        m_tlasNode[nodesUsed].bounds = m_bvhInstances[ii].getAABB();
+        m_tlasNode[nodesUsed].aabb_world = m_bvhInstances[ii].getAABB_world();
         m_tlasNode[nodesUsed].bvhIdx = ii;
         m_tlasNode[nodesUsed++].leftRight = 0;  // makes it a leaf
     }
@@ -409,9 +419,8 @@ void TLAS::build() {
         // Make new node
         TLASNode& newNode = m_tlasNode[nodeIndices];
         newNode.leftRight = nodeIdxA + (nodeIdxB << 16);
-        newNode.bounds = nodeA.bounds;
-        newNode.bounds.extend(nodeB.bounds.aabbMin);
-        newNode.bounds.extend(nodeB.bounds.aabbMax);
+        newNode.aabb_world = nodeA.aabb_world;
+        newNode.aabb_world.extend(nodeB.aabb_world);
     };
 
     int a = 0;
@@ -434,23 +443,23 @@ void TLAS::build() {
     m_tlasNode[0] = m_tlasNode[nodesIdx[a]];
 }
 
-void TLAS::intersect(BVHRay& ray) const {
+void TLAS::intersect(BVHRay& ray_world) const {
     std::array<TLASNode, 64> stack{m_tlasNode.front()};
     int16_t stackPtr = 0;
     for (;stackPtr >= 0;) {
         const auto& node = stack[stackPtr--];
         if (node.isLeaf()) {
-            auto  tempT = ray.t;
-            m_bvhInstances[node.bvhIdx].intersect(ray);
-            assert(tempT >= ray.t);
+            auto  tempT = ray_world.t;
+            m_bvhInstances[node.bvhIdx].intersect(ray_world);
+            assert(tempT >= ray_world.t);
             continue;
         }
 
         auto child1 = m_tlasNode[node.leftRight & 0xFFFF];
         auto child2 = m_tlasNode[node.leftRight >> 16];
 
-        auto t1 = intersectAABB(ray, child1.bounds.aabbMin, child1.bounds.aabbMax);
-        auto t2 = intersectAABB(ray, child2.bounds.aabbMin, child2.bounds.aabbMax);
+        auto t1 = intersectAABB(ray_world, child1.aabb_world.aabbMin, child1.aabb_world.aabbMax);
+        auto t2 = intersectAABB(ray_world, child2.aabb_world.aabbMin, child2.aabb_world.aabbMax);
         if (t1 > t2) {
             std::swap(t1, t2);
             std::swap(child1, child2);

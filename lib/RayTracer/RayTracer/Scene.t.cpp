@@ -1,9 +1,9 @@
 #include <RayTracer/Scene.h>
 #include <iostream>
 #include <random>
+#include <mutex>
 #include <catch2/catch_test_macros.hpp>
 
-#pragma GCC optimize("O0")
 namespace VdbFields {
 namespace {
 struct UniformRandomSampler {
@@ -116,6 +116,16 @@ TEST_CASE("Full ray tracing on tri mesh") {
     auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                          Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
 
+    
+    auto lightDir1 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(-1.f, 1.f, 1.f).normalized(), 10.f);
+    auto lightDir2 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(1.f, -1.f, 1.f).normalized(), 10.f);
+    auto lightPoint1 =
+        Light::fromImpl<PointLight>(Eigen::Vector3f(-16.f, 0.f, 16.f).normalized(), 10.f);
+
+    std::vector<Light> lights{lightDir1, lightDir2, lightPoint1};
+
     // Create BRDF with appropriate values for testing
     BRDF material1 = {
         .diffuse = Eigen::Vector3f(10, 3.8, 8.8),   // Diffuse reflectance (kd)
@@ -160,15 +170,6 @@ TEST_CASE("Full ray tracing on tri mesh") {
     auto sphereIntersector4 = ShapeIntersector::fromImpl<SphereIntersector>(
         Sphere{sphereCenter4, 30.f}, Eigen::Affine3f::Identity(), Material{material4});
 
-    auto lightDir1 =
-        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(-1.f, 1.f, 1.f).normalized(), 10.f);
-    auto lightDir2 =
-        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(1.f, -1.f, 1.f).normalized(), 10.f);
-    auto lightPoint1 =
-        Light::fromImpl<PointLight>(Eigen::Vector3f(-16.f, 0.f, 16.f).normalized(), 10.f);
-
-    std::vector<Light> lights = {lightDir1, lightDir2, lightPoint1};
-
     auto scene = Scene<Sampler<UniformRandomSampler>>(
         screenShape, camera, std::vector{pyramid1, pyramid2, sphereIntersector4},
         std::move(lights));
@@ -184,7 +185,7 @@ TEST_CASE("Full ray tracing on tri mesh") {
                 std::cout << "progress: " << static_cast<float>(val) / den << std::endl;
             }
         },
-        10);
+        16);
 
     auto t_end = std::chrono::high_resolution_clock::now();
 

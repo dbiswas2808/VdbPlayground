@@ -94,11 +94,10 @@ TEST_CASE("BVH") {
         mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
 
         BVH bvh {cow<BVHMesh>(mesh)};
-        CHECK_NOTHROW(bvh.buildBVH());
 
         for (const auto& tri : mesh.triangles) {
             const auto& pt = tri.centroid;
-            const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+            const auto& n = VdbFields::normal(tri.vs[0], tri.vs[1], tri.vs[2]);
             BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
                        Eigen::Vector3f(std::numeric_limits<float>::infinity(),
                                        std::numeric_limits<float>::infinity(), -1)};
@@ -142,13 +141,11 @@ TEST_CASE("BVHInstance") {
         mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
 
         cow<BVH> bvh {cow<BVHMesh>(mesh)};
-        CHECK_NOTHROW(bvh.write().buildBVH());
-
         BVHInstance bvhInstance{bvh, Eigen::Affine3f(Eigen::Translation3f(0, 0, -1))};
 
         for (const auto& tri : mesh.triangles) {
             const auto& pt = tri.centroid;
-            const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+            const auto& n = VdbFields::normal(tri.vs[0], tri.vs[1], tri.vs[2]);
             BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
                        Eigen::Vector3f(std::numeric_limits<float>::infinity(),
                                        std::numeric_limits<float>::infinity(), -1)};
@@ -192,7 +189,6 @@ TEST_CASE("TLAS") {
         mesh.triangles.push_back({v9, v10, v11, (v9 + v10 + v11) / 3});
 
         cow<BVH> bvh {cow<BVHMesh>(mesh)};
-        CHECK_NOTHROW(bvh.write().buildBVH());
 
         std::array<Eigen::Translation3f, 4> txs{
             Eigen::Translation3f(0, 0, -1), Eigen::Translation3f(12.1, 0, -1),
@@ -214,7 +210,7 @@ TEST_CASE("TLAS") {
         for (auto tx : txs) {
             for (const auto& tri : mesh.triangles) {
                 const Eigen::Vector3f& pt = tx * tri.centroid;
-                const auto& n = VdbFields::normal(tri.v0, tri.v1, tri.v2);
+                const auto& n = VdbFields::normal(tri.vs[0], tri.vs[1], tri.vs[2]);
                 BVHRay ray{pt + Eigen::Vector3f(0, 0, 1), Eigen::Vector3f(0, 0, -1),
                            Eigen::Vector3f(std::numeric_limits<float>::infinity(),
                                            std::numeric_limits<float>::infinity(), -1)};

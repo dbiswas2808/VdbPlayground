@@ -2,15 +2,44 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "cmake",
-			"label": "CMake: configure",
-			"command": "configure",
-			"problemMatcher": [],
-			"detail": "CMake template configure task",
+			"label": "CMake Configure",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"-S",
+				"${workspaceFolder}", // Path to your CMakeLists.txt file
+				"-B",
+				"${workspaceFolder}/build", // Build directory
+				"-B",
+				"${workspaceFolder}/build", // Build directory
+				"-G",
+        		"Ninja", // Specify the Ninja generator
+				"-DCMAKE_C_COMPILER=gcc-12",
+				"-DCMAKE_CXX_COMPILER=g++",
+				"-DCMAKE_CXX_STANDARD=20" // Set your desired C++ standard
+			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "Build",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"${workspaceFolder}/build", // Build directory
+				"--config",
+				"RelWithDebInfo",// or "Release" or any other desired build configuration
+				"--target",
+				"RayTracerTest" // Name of your executable target
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"dependsOn": "CMake Configure"
 		}
 	]
 }

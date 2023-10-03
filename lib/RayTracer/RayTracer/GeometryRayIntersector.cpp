@@ -64,9 +64,11 @@ std::optional<RayIntersect> TriMeshIntersector::intersect(const Ray& ray) const 
     bvh.intersect(bvhRay_geom);
     if (bvhRay_geom.hasIntersection()) {
         const auto intersectionPt_world =
-            m_worldFromGeom * (bvhRay_geom.origin + bvhRay_geom.t * bvhRay_geom.direction);
+            (m_worldFromGeom * (bvhRay_geom.origin + bvhRay_geom.t * bvhRay_geom.direction)).eval();
         const auto normal_world =
-            m_worldFromGeom.rotation().transpose().inverse() * bvhRay_geom.normal;
+            (m_worldFromGeom.rotation().transpose().inverse() * bvhRay_geom.normal)
+                .eval()
+                .normalized();
         return RayIntersect{.point_world = intersectionPt_world,
                             .hitT_mm = bvhRay_geom.t,
                             .normal_world = normal_world,

@@ -14,6 +14,8 @@ class ShapeIntersector {
         [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const = 0;
         [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const = 0;
         [[nodiscard]] virtual std::unique_ptr<Concept> clone() const = 0;
+
+        virtual ~Concept() = default;
     };
 
     template <class T>
@@ -83,12 +85,12 @@ class TriMeshIntersector {
    public:
     TriMeshIntersector(std::span<const Eigen::Vector3f> triangleSoup, Eigen::Affine3f worldFromGeom,
                        Material material)
-        : bvh(cow<BVHMesh>(BVHMesh::makeMesh(triangleSoup))),
+        : bvh(cow<BVHMesh>(BVHMesh::makeMesh(triangleSoup,
+                                             std::vector(triangleSoup.size(), Eigen::Vector3f()),
+                                             std::vector(triangleSoup.size(), Eigen::Vector2f())))),
           m_worldFromGeom(worldFromGeom),
           m_geomFromWorld(worldFromGeom.inverse()),
-          m_material(material) {
-        bvh.buildBVH();
-    }
+          m_material(material) {}
 
     [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
 

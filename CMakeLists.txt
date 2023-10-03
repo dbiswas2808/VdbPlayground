@@ -15,8 +15,14 @@ if ( CCACHE_FOUND )
     set ( CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE} )
 endif ( CCACHE_FOUND )
 
+if ( VF_ASAN )
+    set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address" )
+    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address" )
+endif ( VF_ASAN )
+
 find_package ( Eigen3 REQUIRED )
 find_package ( assimp REQUIRED )
+find_package(TBB REQUIRED)
 
 # Define main target app VDBFields
 add_executable ( VDBFields main.cpp )

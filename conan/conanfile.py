@@ -16,6 +16,8 @@ class TestProject(ConanFile):
         self.requires("assimp/5.2.2")
         self.requires("catch2/3.3.2")
         self.requires("stlab/1.7.1")
+        self.requires("libpng/1.6.40")
+        self.requires("tbb/2020.3")
 
     def build(self):
         cmake = CMake(self)

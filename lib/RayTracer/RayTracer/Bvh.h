@@ -1,6 +1,7 @@
 #include <numeric>
 #include <ranges>
 #include <span>
+#include <memory>
 #include <Eigen/Geometry>
 #include <RayTracer/Common.h>
 
@@ -36,19 +37,26 @@ struct BVHRay {
 [[nodiscard]] float intersectAABB(const BVHRay& rayOrigin, const Eigen::Vector3f& aabbMin,
                                   const Eigen::Vector3f& aabbMax);
 
+class BVH;
+
 struct BVHMesh {
     struct Triangle {
-        Eigen::Vector3f v0;
-        Eigen::Vector3f v1;
-        Eigen::Vector3f v2;
+        std::array<Eigen::Vector3f, 3> vs;
         Eigen::Vector3f centroid;
     };
 
+    struct TriEx {
+        std::array<Eigen::Vector2f, 3> texUv;
+        std::array<Eigen::Vector3f, 3> normal;
+    };
+
     std::vector<Triangle> triangles;
+    std::vector<TriEx> triData;
 
-    [[nodiscard]] static BVHMesh makeMesh(std::span<const Eigen::Vector3f> triangleSoup);
+    [[nodiscard]] static BVHMesh makeMesh(std::span<const Eigen::Vector3f> triangleSoup,
+                                          std::span<const Eigen::Vector3f> normals,
+                                          std::span<const Eigen::Vector2f> texUvs);
 };
-
 
 struct BVHNode {
     AABB bounds;
@@ -71,9 +79,10 @@ struct BVHNode {
 
 class BVH {
    public:
-    BVH(cow<const BVHMesh> mesh)
+    BVH(cow<BVHMesh> mesh)
         : m_mesh(std::move(mesh)), m_triIdx(m_mesh->triangles.size()) {
         std::iota(m_triIdx.begin(), m_triIdx.end(), 0);
+        this->buildBVH();
     }
 
     void intersect(BVHRay& ray) const;
@@ -114,18 +123,18 @@ class BVH {
 class BVHInstance {
    public:
     BVHInstance(cow<BVH> bvh, const Eigen::Affine3f& worldFromGeom);
-    void intersect(BVHRay& ray) const;
-    [[nodiscard]] const AABB& getAABB() const { return m_aabb; }
+    void intersect(BVHRay& ray_world) const;
+    [[nodiscard]] const AABB& getAABB_world() const { return m_aabb_world; }
 
    private:
     cow<BVH> m_bvh;
     Eigen::Affine3f m_worldFromGeom;
     Eigen::Affine3f m_geomFromWorld;
-    AABB m_aabb;
+    AABB m_aabb_world;
 };
 
 struct TLASNode {
-    AABB bounds;
+    AABB aabb_world;
     uint leftRight;  // If leaf level this is the first triangle index, otherwise it is the index of
                      // the left child
     uint bvhIdx;
@@ -139,13 +148,12 @@ class TLAS {
    public:
     TLAS(std::vector<BVHInstance> bvhInstances);
     void build();
-    void intersect(BVHRay& ray) const;
+    void intersect(BVHRay& ray_world) const;
 
    private:
     [[nodiscard]] int findBestMatch(std::span<const int> TLASNodes, int nodeA) const;
 
     std::vector<TLASNode> m_tlasNode;
     std::vector<BVHInstance> m_bvhInstances;
-    AABB m_aabb;
 };
 }  // namespace VdbFields::RayTracer
