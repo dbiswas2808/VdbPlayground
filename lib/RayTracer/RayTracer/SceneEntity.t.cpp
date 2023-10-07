@@ -93,6 +93,7 @@ TEST_CASE("Test camera ray") {
         .specular = Eigen::Vector3f(0.5, 0.1, 0.5),  // Specular reflectance (ks)
         .ambient = Eigen::Vector3f(0.2, 0.2, 0.1),   // Ambient reflectance (ka)
         .emission = Eigen::Vector3f(0.0, 0.0, 0.0),  // Emission (glow)
+        .reflectivity = 0.8f,
         .shininess = 30                              // Shininess (n)
     };
     Eigen::Vector3f sphereCenter = {0.f, 0.f, -8.f};

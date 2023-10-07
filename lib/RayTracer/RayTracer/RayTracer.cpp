@@ -38,7 +38,7 @@ namespace {
 
     BRDF::Color sum = BRDF::Color::Zero();
     if (auto rayIntersect = aggregatePrimitiveIntersector.intersect(rayIn)) {
-        sum += rayIntersect->brdf.emission + rayIntersect->brdf.ambient;
+        sum = rayIntersect->brdf.emission + rayIntersect->brdf.ambient;
         for (auto& l : lights) {
             auto li = l.getIntensity(rayIntersect->point_world);
 
@@ -52,9 +52,9 @@ namespace {
             }
         }
 
-        sum +=
-            0.8 * calculateVisibleLightsIllumination(snellsReflection(rayIn, *rayIntersect), lights,
-                                                     aggregatePrimitiveIntersector, depth - 1);
+        sum += rayIntersect->brdf.reflectivity *
+               calculateVisibleLightsIllumination(snellsReflection(rayIn, *rayIntersect), lights,
+                                                  aggregatePrimitiveIntersector, depth - 1);
     }
 
     return sum;
@@ -64,7 +64,7 @@ namespace RayTracer {
 BRDF::Color RayTracerImpl::rayTrace(Ray inRay) {
     // Add diffuse and specular component
     BRDF::Color result =
-        calculateVisibleLightsIllumination(inRay, m_lights, m_aggregatePrimitiveIntersector);
+        calculateVisibleLightsIllumination(inRay, m_lights, m_aggregatePrimitiveIntersector, 8);
 
     return result;
 }

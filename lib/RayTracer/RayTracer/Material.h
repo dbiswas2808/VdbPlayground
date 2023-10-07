@@ -8,6 +8,7 @@ struct BRDF {
     Color specular;
     Color ambient;
     Color emission;
+    float reflectivity;
     int shininess;
 };
 

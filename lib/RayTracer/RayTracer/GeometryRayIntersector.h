@@ -55,11 +55,11 @@ class ShapeIntersector {
     ShapeIntersector(const ShapeIntersector& other) : m_intersector(other.m_intersector->clone()) {}
     ShapeIntersector(ShapeIntersector&& other) : m_intersector(std::move(other.m_intersector)) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const {
+    [[nodiscard]] std::optional<RayIntersect> intersect(const Ray& ray_world) const {
         return m_intersector->intersect(ray_world);
     }
 
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const {
+    [[nodiscard]] bool hasIntersection(const Ray& ray_world) const {
         return m_intersector->hasIntersection(ray_world);
     }
 
@@ -70,13 +70,18 @@ class ShapeIntersector {
 class SphereIntersector {
    public:
     SphereIntersector(Sphere sphere, const Eigen::Affine3f& worldFromGeom, Material material)
-        : m_sphere(sphere), m_worldFromGeom(worldFromGeom), m_material(material) {}
+        : m_sphere(sphere),
+          m_worldFromGeom(worldFromGeom),
+          m_material(material),
+          m_aabb_world(makeAABB_world(sphere, worldFromGeom)) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray_world) const;
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray_world) const;
+    [[nodiscard]] std::optional<RayIntersect> intersect(const Ray& ray_world) const;
+    [[nodiscard]] bool hasIntersection(const Ray& ray_world) const;
+    [[nodiscard]] static AABB makeAABB_world(const Sphere& sphere, const Eigen::Affine3f& worldFromGeom);
 
    private:
     Eigen::Affine3f m_worldFromGeom;
+    AABB m_aabb_world;
     Sphere m_sphere;
     Material m_material;
 };
@@ -85,24 +90,45 @@ class TriMeshIntersector {
    public:
     TriMeshIntersector(std::span<const Eigen::Vector3f> triangleSoup, Eigen::Affine3f worldFromGeom,
                        Material material)
-        : bvh(cow<BVHMesh>(BVHMesh::makeMesh(triangleSoup,
-                                             std::vector(triangleSoup.size(), Eigen::Vector3f()),
-                                             std::vector(triangleSoup.size(), Eigen::Vector2f())))),
-          m_worldFromGeom(worldFromGeom),
-          m_geomFromWorld(worldFromGeom.inverse()),
+        : m_bvh((cow<BVHMesh>(BVHMesh::makeMesh(
+                    triangleSoup, std::vector(triangleSoup.size(), Eigen::Vector3f()),
+                    std::vector(triangleSoup.size(), Eigen::Vector2f())))),
+                worldFromGeom),
           m_material(material) {}
 
-    [[nodiscard]] virtual std::optional<RayIntersect> intersect(const Ray& ray) const final;
+    [[nodiscard]] std::optional<RayIntersect> intersect(const Ray& ray) const;
 
-    [[nodiscard]] virtual bool hasIntersection(const Ray& ray) const final {
+    [[nodiscard]] bool hasIntersection(const Ray& ray) const {
         return static_cast<bool>(intersect(ray));
     }
 
    private:
-    Eigen::Affine3f m_worldFromGeom;
-    Eigen::Affine3f m_geomFromWorld;
-    BVH bvh;
+    BVHInstance m_bvh;
     Material m_material;
+};
+
+class AggregateMeshIntersector {
+   public:
+    AggregateMeshIntersector() = default;
+
+    [[nodiscard]] std::optional<RayIntersect> intersect(const Ray& ray_world) const;
+    [[nodiscard]] bool hasIntersection(const Ray& ray_world) const;
+
+    void addMeshIntersector(cow<BVHMesh> mesh, const Material& material,
+                            const Eigen::Affine3f& worldFromGeom) {
+        m_bvhInstance.push_back({std::move(mesh), worldFromGeom});
+        m_materials.push_back(material);
+    }
+
+    void buildTlas() {
+        m_tlas = TLAS(m_bvhInstance);
+        m_tlas.write().build();
+    }
+
+   private:
+    std::vector<BVHInstance> m_bvhInstance;
+    std::vector<Material> m_materials;
+    cow<TLAS> m_tlas;
 };
 
 class AggregratePrimitiveIntersector {

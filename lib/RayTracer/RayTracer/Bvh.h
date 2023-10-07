@@ -6,25 +6,13 @@
 #include <RayTracer/Common.h>
 
 namespace VdbFields::RayTracer{
-struct AABB {
-    Eigen::Vector3f aabbMin = Eigen::Vector3f::Constant(std::numeric_limits<float>::infinity());
-    Eigen::Vector3f aabbMax = Eigen::Vector3f::Constant(-std::numeric_limits<float>::infinity());
-
-    void extend(const Eigen::Vector3f& point);
-    void extend(const AABB& other);
-    [[nodiscard]] bool isEmpty() const;
-    [[nodiscard]] float area() const;
-    [[nodiscard]] bool contains(const Eigen::Vector3f& pt) const;
-
-    [[nodiscard]] friend AABB operator*(const Eigen::Affine3f& transform, const AABB& aabb);
-};
-
 struct BVHRay {
     Eigen::Vector3f origin;
     Eigen::Vector3f direction;
     Eigen::Vector3f invDirection;
     Eigen::Vector3f normal;
     float t = std::numeric_limits<float>::infinity();
+    int bvhIdx = -1;
 
     [[nodiscard]] BVHRay transform(const Eigen::Affine3f& transform) const;
 
@@ -146,6 +134,7 @@ struct TLASNode {
 
 class TLAS {
    public:
+    TLAS() = default;
     TLAS(std::vector<BVHInstance> bvhInstances);
     void build();
     void intersect(BVHRay& ray_world) const;
