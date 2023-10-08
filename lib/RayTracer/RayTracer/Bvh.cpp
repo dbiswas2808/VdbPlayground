@@ -348,10 +348,10 @@ void TLAS::build() {
 }
 
 void TLAS::intersect(BVHRay& ray_world) const {
-    std::array<TLASNode, 64> stack{m_tlasNode.front()};
+    std::array<TLASNode const*, getMaxDepth()> stack = {&m_tlasNode[0]};
     int16_t stackPtr = 0;
     for (;stackPtr >= 0;) {
-        const auto& node = stack[stackPtr--];
+        const auto& node = *stack[stackPtr--];
         if (node.isLeaf()) {
             auto  tempT = ray_world.hit.t;
             m_bvhInstances[node.bvhIdx].intersect(ray_world);
@@ -362,11 +362,11 @@ void TLAS::intersect(BVHRay& ray_world) const {
             continue;
         }
 
-        auto child1 = m_tlasNode[node.leftRight & 0xFFFF];
-        auto child2 = m_tlasNode[node.leftRight >> 16];
+        auto const* child1 = &m_tlasNode[node.leftRight & 0xFFFF];
+        auto const* child2 = &m_tlasNode[node.leftRight >> 16];
 
-        auto t1 = intersectAABB(ray_world, child1.aabb_world.aabbMin, child1.aabb_world.aabbMax);
-        auto t2 = intersectAABB(ray_world, child2.aabb_world.aabbMin, child2.aabb_world.aabbMax);
+        auto t1 = intersectAABB(ray_world, child1->aabb_world.aabbMin, child1->aabb_world.aabbMax);
+        auto t2 = intersectAABB(ray_world, child2->aabb_world.aabbMin, child2->aabb_world.aabbMax);
         if (t1 > t2) {
             std::swap(t1, t2);
             std::swap(child1, child2);
