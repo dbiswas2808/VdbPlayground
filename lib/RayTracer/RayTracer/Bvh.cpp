@@ -1,48 +1,8 @@
 #include <RayTracer/Bvh.h>
-
+#pragma GCC optimize ("O0")
 namespace VdbFields {
 namespace RayTracer {
 namespace {
-[[nodiscard]] float intersectTriangle(const BVHRay& ray, const Eigen::Vector3f& v0,
-                                      const Eigen::Vector3f& v1, const Eigen::Vector3f& v2) {
-    Eigen::Vector3f e1 = v1 - v0;
-    Eigen::Vector3f e2 = v2 - v0;
-    Eigen::Vector3f h = ray.direction.cross(e2);
-    float a = e1.dot(h);
-
-    // Must be tangent to the plane
-    if (-epsilon_mm<float> < a && a < epsilon_mm<float>) {
-        return std::numeric_limits<float>::infinity();
-    }
-
-    float f = 1.0f / a;
-    Eigen::Vector3f s = ray.origin - v0;
-    float u = f * s.dot(h);
-
-    if (not(0.f < u && u < 1.0f)) {
-        return std::numeric_limits<float>::infinity();
-    }
-
-    Eigen::Vector3f q = s.cross(e1);
-    float v = f * ray.direction.dot(q);
-
-    if (not(0.0f < v && u + v < 1.0f)) {
-        return std::numeric_limits<float>::infinity();
-    }
-
-    float t = f * e2.dot(q);
-
-    if (t > epsilon_mm<float>) {
-        return t;
-    }
-
-    return std::numeric_limits<float>::infinity();
-}
-
-[[nodiscard]] Eigen::Matrix3f txInvTranspose(const Eigen::Affine3f& transform) {
-    return transform.rotation().transpose().inverse();
-}
-
 [[nodiscard]] Eigen::Vector3f normal(const Eigen::Vector3f& v0, const Eigen::Vector3f& v1,
                                      const Eigen::Vector3f& v2) {
     return (v2 - v1).cross(v0 - v1).normalized();
@@ -69,7 +29,7 @@ consteval uint getMaxDepth() {
 // Free functions
 float RayTracer::intersectAABB(const BVHRay& ray, const Eigen::Vector3f& aabbMin,
                                const Eigen::Vector3f& aabbMax) {
-    return VdbFields::intersectAABB(ray.origin, ray.invDirection, ray.t, aabbMin, aabbMax);
+    return VdbFields::intersectAABB(ray.origin, ray.invDirection, ray.hit.t, aabbMin, aabbMax);
 }
 
 namespace RayTracer {
@@ -78,10 +38,10 @@ BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
         .origin =transform * this->origin,
         .direction = transform.rotation() * this->direction,
         .invDirection = Eigen::Vector3f(),
-        .normal = txInvTranspose(transform) * this->normal,
-        .t = this->t
+        .hit = this->hit
     };
 
+    // cache direction inverse for computing triangle intersection
     result.invDirection = result.direction.cwiseInverse();
     return result;
 }
@@ -89,7 +49,7 @@ BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
 // BVH mesh
 /*static*/ BVHMesh BVHMesh::makeMesh(std::span<const Eigen::Vector3f> triangleSoup,
                                      std::span<const Eigen::Vector3f> normals,
-                                     std::span<const Eigen::Vector2f> texUvs) {
+                                     std::span<const Eigen::Vector2f> texUvs, Material material) {
     assert(triangleSoup.size() % 3 == 0);
     assert(normals.size() == triangleSoup.size());
     assert(texUv.size() == triangleSoup.size());
@@ -106,7 +66,7 @@ BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
                                 std::array{normals[ii], normals[ii + 1], normals[ii + 2]}});
     }
 
-    return {std::move(result), std::move(triData)};
+    return {std::move(result), std::move(triData), material};
 }
 
 // BVH implementation
@@ -179,10 +139,14 @@ void BVH::intersect(BVHRay& ray) const {
         if (node.isLeaf()) {
             // Leaf node
             for (uint i = 0; i < node.triCount; ++i) {
-                const auto& [vs, centroid] = getTriangle(node.leftFirst + i);
-                if (auto t = intersectTriangle(ray, vs[0], vs[1], vs[2]); t < ray.t) {
-                    ray.t = t;
-                    ray.normal = normal(vs[0], vs[1], vs[2]);
+                auto triIdx = node.leftFirst + i;
+                const auto& [vs, centroid] = getTriangle(triIdx);
+                if (auto intersectData =
+                        intersectTriangle(ray.origin, ray.direction, vs[0], vs[1], vs[2]);
+                    intersectData.t < ray.hit.t) {
+                    ray.hit.t = intersectData.t;
+                    ray.hit.uv = intersectData.uv;
+                    ray.hit.setTriIdx(getTriIdx(triIdx));
                 }
             }
         } else {
@@ -311,8 +275,7 @@ BVHInstance::BVHInstance(cow<BVH> bvh, const Eigen::Affine3f& worldFromGeom)
 void BVHInstance::intersect(BVHRay& ray_world) const {
     auto ray_geom = ray_world.transform(m_geomFromWorld);
     m_bvh->intersect(ray_geom);
-    ray_world.t = ray_geom.t;
-    ray_world.normal =  (txInvTranspose(m_worldFromGeom) * ray_geom.normal).normalized();
+    ray_world = ray_geom.transform(m_worldFromGeom);
 }
 
 // TLAS implementation
@@ -390,10 +353,10 @@ void TLAS::intersect(BVHRay& ray_world) const {
     for (;stackPtr >= 0;) {
         const auto& node = stack[stackPtr--];
         if (node.isLeaf()) {
-            auto  tempT = ray_world.t;
+            auto  tempT = ray_world.hit.t;
             m_bvhInstances[node.bvhIdx].intersect(ray_world);
-            if (tempT > ray_world.t) {
-                ray_world.bvhIdx = node.bvhIdx;
+            if (tempT > ray_world.hit.t) {
+                ray_world.hit.setBvhInstIdx(node.bvhIdx);
             }
             assert(tempT >= ray_world.t);
             continue;

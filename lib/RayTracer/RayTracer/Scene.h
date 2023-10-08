@@ -8,19 +8,19 @@
 #include <RayTracer/RayTracer.h>
 #include <RayTracer/SceneEntity.h>
 
-#pragma GCC optimize("O0")
 namespace VdbFields::RayTracer {
-
 template <typename SamplerT>
 class Scene {
    public:
     Scene(Eigen::Vector2i shape, Camera camera, std::vector<ShapeIntersector>&& shapeIntersectors,
-          std::vector<Light>&& lights,
+          std::vector<Light>&& lights, const Eigen::Affine3f& worldFromCamera,
           std::optional<Eigen::Vector2i> tiles = Eigen::Vector2i(1000, 1000))
         : m_camera(camera),
-          m_rayTracer(std::move(shapeIntersectors), std::move(lights)),
+          m_rayTracer(AggregratePrimitiveIntersector(std::move(shapeIntersectors)),
+                      std::move(lights)),
           m_film(shape),
-          m_tiles(tiles) {}
+          m_tiles(tiles),
+          m_worldFromCamera(worldFromCamera) {}
 
     void rayTrace(std::function<void(int, int)> progress = nullptr, size_t numSamples = 1) {
         if (m_tiles) {
@@ -64,7 +64,7 @@ class Scene {
         Eigen::Vector3f color = Eigen::Vector3f(0, 0, 0);
         for (size_t kk = 0; kk < numSamples; ++kk) {
             Eigen::Vector2f sample_px = sampler.getSample_px();
-            Ray ray = m_camera.getRay_camera(sample_px);
+            Ray ray = m_camera.getRay_camera(sample_px).transform(m_worldFromCamera);
             color += m_rayTracer.rayTrace(ray);
         }
 
@@ -75,5 +75,6 @@ class Scene {
     RayTracerImpl m_rayTracer;
     Film m_film;
     std::optional<Eigen::Vector2i> m_tiles;
+    Eigen::Affine3f m_worldFromCamera;
 };
 }  // namespace VdbFields::RayTracer

@@ -18,6 +18,23 @@ struct UniformRandomSampler {
     mutable std::mt19937 gen;
     mutable std::normal_distribution<float> dis;
 };
+
+[[nodiscard]] std::vector<Eigen::Vector3f> makeVertexTestNormals(std::span<const Eigen::Vector3f> vertices) {
+    std::vector<Eigen::Vector3f> normals;
+    for (size_t ii = 0; ii < vertices.size(); ii+=3) {
+        auto n = normal(vertices[ii], vertices[ii + 1], vertices[ii + 2]);
+        normals.push_back(n);
+        normals.push_back(n);
+        normals.push_back(n);
+    }
+
+    return normals;
+}
+
+[[nodiscard]] std::vector<Eigen::Vector2f> makeTestTexCoords(
+    std::span<const Eigen::Vector3f> vertices) {
+    return std::vector<Eigen::Vector2f>(vertices.size(), Eigen::Vector2f::Zero());
+}
 }  // namespace
 
 TEST_CASE("Test full ray tracing") {
@@ -97,7 +114,7 @@ TEST_CASE("Test full ray tracing") {
     auto scene = Scene<Sampler<>>(
         screenShape, camera,
         std::vector{sphereIntersector1, sphereIntersector2, sphereIntersector3, sphereIntersector4},
-        std::move(lights));
+        std::move(lights), worldFromCamera);
     scene.rayTrace([](int num, int den) {
         if (num % 10'000 == 0) {
             std::cout << "progress: " << static_cast<float>(num) / den << std::endl;
@@ -112,7 +129,7 @@ TEST_CASE("Full ray tracing on tri mesh") {
     using namespace RayTracer;
     // auto worldFromCamera = Eigen::Matrix4f::Identity();
     Eigen::Affine3f worldFromCamera =
-        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -8.f),
+        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -1.f),
                                Eigen::Vector3f(0.f, 1.f, 0.f))
             .inverse();
 
@@ -168,18 +185,20 @@ TEST_CASE("Full ray tracing on tri mesh") {
         Eigen::Vector3f(1, 1, -1), Eigen::Vector3f(1, -1, -1), Eigen::Vector3f(-1, -1, -1)};
 
     auto pyramid1 = ShapeIntersector::fromImpl<TriMeshIntersector>(
-        tris, Eigen::Affine3f(Eigen::Translation3f(0.f, 0.f, -8.f)), Material{material1});
+        tris, makeVertexTestNormals(tris), makeTestTexCoords(tris),
+        Eigen::Affine3f(Eigen::Translation3f(0.f, 0.f, -8.f)), Material{material1});
 
     auto pyramid2 = ShapeIntersector::fromImpl<TriMeshIntersector>(
-        tris, Eigen::Affine3f(Eigen::Translation3f(-1.f, 0.f, -5.f)), Material{material2});
+        tris, makeVertexTestNormals(tris), makeTestTexCoords(tris),
+        Eigen::Affine3f(Eigen::Translation3f(-1.f, 0.f, -5.f)), Material{material2});
 
     Eigen::Vector3f sphereCenter4 = {20.f, 2.f, -100.f};
     auto sphereIntersector4 = ShapeIntersector::fromImpl<SphereIntersector>(
         Sphere{sphereCenter4, 30.f}, Eigen::Affine3f::Identity(), Material{material4});
 
     auto scene = Scene<Sampler<UniformRandomSampler>>(
-        screenShape, camera, std::vector{pyramid1, pyramid2, sphereIntersector4},
-        std::move(lights));
+        screenShape, camera, std::vector{pyramid1, pyramid2, sphereIntersector4}, std::move(lights),
+        worldFromCamera);
 
     std::atomic<int> atomicProgress;
     std::mutex m;
@@ -206,18 +225,17 @@ TEST_CASE("Full ray tracing on tri mesh") {
 }
 
 TEST_CASE("Full ray tracing with TLAS") {
-
     using namespace RayTracer;
-    // auto worldFromCamera = Eigen::Matrix4f::Identity();
+    auto delta = 8.f;
     Eigen::Affine3f worldFromCamera =
-        lookAt_cameraFromWorld(Eigen::Vector3f(0.f, 0.f, 0.f), Eigen::Vector3f(0.f, 0.f, -8.f),
-                               Eigen::Vector3f(0.f, 1.f, 0.f))
+        lookAt_cameraFromWorld(Eigen::Vector3f(delta, delta, std::sqrt(144.f - delta * delta - delta * delta) - 6),
+                               Eigen::Vector3f(0.f, 0.f, -6.f), Eigen::Vector3f(0.f, 0.f, 1.f))
             .inverse();
 
     auto screenShape = Eigen::Vector2i(10'000, 10'000);
     auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
                          Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
-    
+
     auto lightDir1 =
         Light::fromImpl<DirectionalLight>(Eigen::Vector3f(-1.f, 1.f, 0.f).normalized(), 10.f);
     auto lightDir2 =
@@ -238,61 +256,66 @@ TEST_CASE("Full ray tracing with TLAS") {
 
     // Create BRDF with appropriate values for testing
     BRDF material1 = {
-        .diffuse = Eigen::Vector3f(10, 10, 10),   // Diffuse reflectance (kd)
+        .diffuse = Eigen::Vector3f(10, 10, 10),      // Diffuse reflectance (kd)
         .specular = Eigen::Vector3f(10., 0.1, 1.5),  // Specular reflectance (ks)
         .ambient = Eigen::Vector3f(0.2, 0.2, 0.1),   // Ambient reflectance (ka)
         .emission = Eigen::Vector3f(8.0, 8.0, 8.0),  // Emission (glow)
         .reflectivity = 0.8f,
-        .shininess = 30                              // Shininess (n)
+        .shininess = 30  // Shininess (n)
     };
 
     BRDF material2 = {
-        .diffuse = Eigen::Vector3f(2.8, 3, 10.8),   // Diffuse reflectance (kd)
+        .diffuse = Eigen::Vector3f(2.8, 3, 10.8),    // Diffuse reflectance (kd)
         .specular = Eigen::Vector3f(9.1, 0.5, 0.5),  // Specular reflectance (ks)
         .ambient = Eigen::Vector3f(0.1, 0.2, 0.2),   // Ambient reflectance (ka)
         .emission = Eigen::Vector3f(4.0, 5.0, 7.0),  // Emission (glow)
         .reflectivity = 0.5f,
-        .shininess = 30                              // Shininess (n)
+        .shininess = 30  // Shininess (n)
     };
 
     BRDF material3 = {
-        .diffuse = Eigen::Vector3f(1, 10.6, 6.9),   // Diffuse reflectance (kd)
+        .diffuse = Eigen::Vector3f(1, 10.6, 6.9),     // Diffuse reflectance (kd)
         .specular = Eigen::Vector3f(0.5, 0.6, 11.9),  // Specular reflectance (ks)
-        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),   // Ambient reflectance (ka)
-        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),  // Emission (glow)
+        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),    // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),   // Emission (glow)
         .reflectivity = 0.8f,
-        .shininess = 30                              // Shininess (n)
+        .shininess = 30  // Shininess (n)
     };
 
     BRDF material4 = {
-        .diffuse = Eigen::Vector3f(9, 10.6, 6.9),   // Diffuse reflectance (kd)
+        .diffuse = Eigen::Vector3f(9, 10.6, 6.9),     // Diffuse reflectance (kd)
         .specular = Eigen::Vector3f(0.5, 0.6, 11.9),  // Specular reflectance (ks)
-        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),   // Ambient reflectance (ka)
-        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),  // Emission (glow)
+        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),    // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),   // Emission (glow)
         .reflectivity = 0.3f,
-        .shininess = 30                              // Shininess (n)
+        .shininess = 30  // Shininess (n)
     };
 
     BRDF material5 = {
-        .diffuse = Eigen::Vector3f(7, 2.6, 6.9),   // Diffuse reflectance (kd)
+        .diffuse = Eigen::Vector3f(7, 2.6, 6.9),      // Diffuse reflectance (kd)
         .specular = Eigen::Vector3f(0.5, 0.6, 11.9),  // Specular reflectance (ks)
-        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),   // Ambient reflectance (ka)
-        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),  // Emission (glow)
+        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),    // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),   // Emission (glow)
         .reflectivity = 0.15f,
-        .shininess = 30                              // Shininess (n)
+        .shininess = 30  // Shininess (n)
     };
 
     // Sample 5 vertices of pyramid mesh test case
     std::vector<Eigen::Vector3f> tris = {
-        Eigen::Vector3f::Zero(),   3 * Eigen::Vector3f(1, -1, -1),  3 * Eigen::Vector3f(1, 1, -1),
-        Eigen::Vector3f::Zero(),   3 * Eigen::Vector3f(1, 1, -1),  3 * Eigen::Vector3f(-1, 1, -1),
-        Eigen::Vector3f::Zero(),   3 * Eigen::Vector3f(-1, 1, -1),  3 * Eigen::Vector3f(-1, -1, -1),
-        Eigen::Vector3f::Zero(),   3 * Eigen::Vector3f(-1, -1, -1), 3 * Eigen::Vector3f(1, -1, -1),
-        3 * Eigen::Vector3f(1, 1, -1), 3 * Eigen::Vector3f(-1, -1, -1), 3 * Eigen::Vector3f(-1, 1, -1),
-        3 * Eigen::Vector3f(1, 1, -1), 3 * Eigen::Vector3f(1, -1, -1), 3 * Eigen::Vector3f(-1, -1, -1)};
+        Eigen::Vector3f::Zero(),         3 * Eigen::Vector3f(1, -1, -1),
+        3 * Eigen::Vector3f(1, 1, -1),   Eigen::Vector3f::Zero(),
+        3 * Eigen::Vector3f(1, 1, -1),   3 * Eigen::Vector3f(-1, 1, -1),
+        Eigen::Vector3f::Zero(),         3 * Eigen::Vector3f(-1, 1, -1),
+        3 * Eigen::Vector3f(-1, -1, -1), Eigen::Vector3f::Zero(),
+        3 * Eigen::Vector3f(-1, -1, -1), 3 * Eigen::Vector3f(1, -1, -1),
+        3 * Eigen::Vector3f(1, 1, -1),   3 * Eigen::Vector3f(-1, -1, -1),
+        3 * Eigen::Vector3f(-1, 1, -1),  3 * Eigen::Vector3f(1, 1, -1),
+        3 * Eigen::Vector3f(1, -1, -1),  3 * Eigen::Vector3f(-1, -1, -1)};
 
-    std::vector<Eigen::Vector3f> trisTest1 = {Eigen::Vector3f::Zero(),  3 * Eigen::Vector3f(1, -1, -1),  3 * Eigen::Vector3f(1, 1, -1)};
-    std::vector<Eigen::Vector3f> trisTest2 = {Eigen::Vector3f::Zero(),   3 * Eigen::Vector3f(-1, 1, -1),  3 * Eigen::Vector3f(-1, -1, -1)};
+    std::vector<Eigen::Vector3f> trisTest1 = {
+        Eigen::Vector3f::Zero(), 3 * Eigen::Vector3f(1, -1, -1), 3 * Eigen::Vector3f(1, 1, -1)};
+    std::vector<Eigen::Vector3f> trisTest2 = {
+        Eigen::Vector3f::Zero(), 3 * Eigen::Vector3f(-1, 1, -1), 3 * Eigen::Vector3f(-1, -1, -1)};
 
     Eigen::Vector3f sphereCenter4 = {-0.f, 0.f, -6.f};
     auto sphereIntersector4 = ShapeIntersector::fromImpl<SphereIntersector>(
@@ -306,35 +329,24 @@ TEST_CASE("Full ray tracing with TLAS") {
         Sphere{sphereCenter4, 1.7f}, Eigen::Affine3f(Eigen::Translation3f(0.f, -3.5f, 0.f)),
         Material{material5});
 
-    // auto pyramid1 = BVHInstance(tris, Eigen::Affine3f(Eigen::Translation3f(0.f, 0.f, -8.f)));
-    // auto pyramid2 = BVHInstance(tris, Eigen::Affine3f(Eigen::Translation3f(-1.f, 0.f, -5.f)));
     AggregateMeshIntersector aggMeshIntersector;
-    // aggMeshIntersector.addMeshIntersector(
-    //     BVHMesh::makeMesh(tris, std::vector<Eigen::Vector3f>{tris.size()},
-    //                       std::vector<Eigen::Vector2f>{tris.size()}),
-    //     Material{material1}, Eigen::Affine3f(Eigen::Translation3f(0.f, 0.f, -11.f)));
-
     aggMeshIntersector.addMeshIntersector(
-        BVHMesh::makeMesh(tris, std::vector<Eigen::Vector3f>{1}, std::vector<Eigen::Vector2f>{1}),
-        Material{material2}, Eigen::Affine3f(Eigen::Translation3f(-4.f, -0.8f, -6.f)));
-
+        BVHMesh::makeMesh(tris, makeVertexTestNormals(tris), makeTestTexCoords(tris),
+                          Material{material2}),
+        Eigen::Affine3f(Eigen::Translation3f(-4.f, -0.8f, -6.f)));
     aggMeshIntersector.addMeshIntersector(
-        BVHMesh::makeMesh(tris, std::vector<Eigen::Vector3f>{1}, std::vector<Eigen::Vector2f>{1}),
-        Material{material4}, Eigen::Affine3f(Eigen::Translation3f(4.f, 0.8f, -6.f)));
-
+        BVHMesh::makeMesh(tris, makeVertexTestNormals(tris), makeTestTexCoords(tris),
+                          Material{material4}),
+        Eigen::Affine3f(Eigen::Translation3f(4.f, 0.8f, -6.f)));
     aggMeshIntersector.buildTlas();
 
-    auto multiMeshIntersector = ShapeIntersector::fromImpl<AggregateMeshIntersector>(std::move(aggMeshIntersector));
- 
-    // Eigen::Vector3f sphereCenter4 = {20.f, 2.f, -100.f};
-    // auto sphereIntersector4 = ShapeIntersector::fromImpl<SphereIntersector>(
-    //     Sphere{sphereCenter4, 30.f}, Eigen::Affine3f::Identity(), Material{material4});
-
+    auto multiMeshIntersector =
+        ShapeIntersector::fromImpl<AggregateMeshIntersector>(std::move(aggMeshIntersector));
     auto scene =
         Scene<Sampler<UniformRandomSampler>>(screenShape, camera,
                                              std::vector{multiMeshIntersector, sphereIntersector4,
                                                          sphereIntersector5, sphereIntersector6},
-                                             std::move(lights));
+                                             std::move(lights), worldFromCamera);
 
     std::atomic<int> atomicProgress;
     std::mutex m;
@@ -359,5 +371,4 @@ TEST_CASE("Full ray tracing with TLAS") {
         "/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/"
         "TLAS_pyramid_spheres_test.png");
 }
-
 }  // namespace VdbFields

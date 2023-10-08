@@ -12,6 +12,13 @@ namespace {
 }
 }  // namespace
 
+SphereIntersector::SphereIntersector(Sphere sphere, const Eigen::Affine3f& worldFromGeom,
+                                     Material material)
+    : m_sphere(sphere),
+      m_worldFromGeom(worldFromGeom),
+      m_material(material),
+      m_aabb_world(makeAABB_world(sphere, worldFromGeom)) {}
+
 /*static*/ 
 AABB SphereIntersector::makeAABB_world(const Sphere& sphere, const Eigen::Affine3f& worldFromGeom) {
     AABB result_world;
@@ -88,16 +95,25 @@ std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray_world) c
                         .brdf = m_material.getBRDF(intersectionPt_world)};
 }
 
+TriMeshIntersector::TriMeshIntersector(std::span<const Eigen::Vector3f> triangleSoup,
+                                       std::span<const Eigen::Vector3f> vtxNormals,
+                                       std::span<const Eigen::Vector2f> vtxTexCoords,
+                                       Eigen::Affine3f worldFromGeom, Material material)
+    : m_bvh((cow<BVHMesh>(BVHMesh::makeMesh(triangleSoup, vtxNormals, vtxTexCoords, material))),
+            worldFromGeom) {}
+
 std::optional<RayIntersect> TriMeshIntersector::intersect(const Ray& ray_world) const {
     BVHRay bvhRay_world = bvhRayFromRay(ray_world);
     m_bvh.intersect(bvhRay_world);
     if (bvhRay_world.hasIntersection()) {
         const auto intersectionPt_world = bvhRay_world.getIntersect();
-        const auto normal_world = bvhRay_world.normal.normalized();
-        return RayIntersect{.point_world = intersectionPt_world,
-                            .hitT_mm = bvhRay_world.t,
-                            .normal_world = normal_world,
-                            .brdf = m_material.getBRDF(intersectionPt_world)};
+        const auto normal_world = m_bvh.getNormal(bvhRay_world.hit.getTriIdx(), bvhRay_world.hit.uv);
+        return RayIntersect{
+            .point_world = intersectionPt_world,
+            .hitT_mm = bvhRay_world.hit.t,
+            .normal_world = normal_world,
+            .brdf = m_bvh.gerMaterial(bvhRay_world.hit.getTriIdx(), bvhRay_world.hit.uv)
+                        .getBRDF(intersectionPt_world)};
     }
     return std::nullopt;
 }
@@ -105,29 +121,38 @@ std::optional<RayIntersect> TriMeshIntersector::intersect(const Ray& ray_world) 
 std::optional<RayIntersect> AggregateMeshIntersector::intersect(const Ray& ray_world) const {
     auto bvhRay_world = bvhRayFromRay(ray_world);
     m_tlas->intersect(bvhRay_world);
-
-    BRDF material = {
-        .diffuse = Eigen::Vector3f(6.8, 10, 5.8),   // Diffuse reflectance (kd)
-        .specular = Eigen::Vector3f(0.1, 0.5, 0.5),  // Specular reflectance (ks)
-        .ambient = Eigen::Vector3f(0.1, 0.2, 0.2),   // Ambient reflectance (ka)
-        .emission = Eigen::Vector3f(0.0, 0.0, 0.0),  // Emission (glow)
-        .shininess = 30                              // Shininess (n)
-    };
-
     if (bvhRay_world.hasIntersection()) {
         const auto intersectionPt_world = bvhRay_world.getIntersect();
-        const auto normal_world = bvhRay_world.normal.normalized();
+        const auto normal_world = m_tlas->getNormal(bvhRay_world.hit);
+        const auto texCoord = m_tlas->getTexCoord(bvhRay_world.hit);
+        const auto material = m_tlas->getMaterial(bvhRay_world.hit);
+
         return RayIntersect{.point_world = intersectionPt_world,
-                            .hitT_mm = bvhRay_world.t,
+                            .hitT_mm = bvhRay_world.hit.t,
                             .normal_world = normal_world,
-                            .brdf = m_materials.at(bvhRay_world.bvhIdx).getBRDF(intersectionPt_world)};
+                            .brdf = material.getBRDF(intersectionPt_world)};
     }
 
     return std::nullopt;
  }
-bool AggregateMeshIntersector::hasIntersection(const Ray& ray_world) const {
-    return intersect(ray_world).has_value();
+
+ bool AggregateMeshIntersector::hasIntersection(const Ray& ray_world) const {
+     return intersect(ray_world).has_value();
+ }
+
+ void AggregateMeshIntersector::addMeshIntersector(cow<BVHMesh> mesh,
+                                                   const Eigen::Affine3f& worldFromGeom) {
+     m_bvhInstance.push_back({std::move(mesh), worldFromGeom});
+ }
+
+void AggregateMeshIntersector::buildTlas() {
+    m_tlas = TLAS(m_bvhInstance);
+    m_tlas.write().build();
 }
+
+AggregratePrimitiveIntersector::AggregratePrimitiveIntersector(
+    std::vector<ShapeIntersector> shapeIntersectors)
+    : m_shapeIntersectors(std::move(shapeIntersectors)) {}
 
 std::optional<RayIntersect> AggregratePrimitiveIntersector::intersect(const Ray& ray_world) const {
     std::optional<RayIntersect> closestIntersect;

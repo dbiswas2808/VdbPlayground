@@ -60,3 +60,41 @@ float VdbFields::intersectAABB(const Eigen::Vector3f& origin, const Eigen::Vecto
 
     return (tmax >= tmin && tmin < t && tmax > 0) ? tmin : std::numeric_limits<float>::infinity();
 }
+
+[[nodiscard]] VdbFields::TriIntersectData VdbFields::intersectTriangle(
+    const Eigen::Vector3f& origin, const Eigen::Vector3f& direction, const Eigen::Vector3f& v0,
+    const Eigen::Vector3f& v1, const Eigen::Vector3f& v2) {
+    Eigen::Vector3f e1 = v1 - v0;
+    Eigen::Vector3f e2 = v2 - v0;
+    
+    Eigen::Vector3f h = direction.cross(e2);
+    float a = e1.dot(h);
+
+    // Must be tangent to the plane
+    if (-epsilon_mm<float> < a && a < epsilon_mm<float>) {
+        return {std::numeric_limits<float>::infinity()};
+    }
+
+    float f = 1.0f / a;
+    Eigen::Vector3f s = origin - v0;
+    float u = f * s.dot(h);
+
+    if (not(0.f < u && u < 1.0f)) {
+        return {std::numeric_limits<float>::infinity()};
+    }
+
+    Eigen::Vector3f q = s.cross(e1);
+    float v = f * direction.dot(q);
+
+    if (not(0.0f < v && u + v < 1.0f)) {
+        return {std::numeric_limits<float>::infinity()};
+    }
+
+    float t = f * e2.dot(q);
+
+    if (t > epsilon_mm<float>) {
+        return {t, Eigen::Vector2f(u, v)};
+    }
+
+    return {std::numeric_limits<float>::infinity()};
+}
