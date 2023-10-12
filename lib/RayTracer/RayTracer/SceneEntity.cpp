@@ -5,8 +5,6 @@
 
 #include <RayTracer/GeometryRayIntersector.h>
 
-
-#pragma GCC optimize ("O0")
 namespace VdbFields {
 namespace RayTracer {
 Eigen::Affine2f detail::ndcFromPixel(Eigen::Vector2i shape_px, float fov_deg) {

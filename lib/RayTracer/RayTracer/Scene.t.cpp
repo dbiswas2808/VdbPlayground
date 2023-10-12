@@ -226,10 +226,10 @@ TEST_CASE("Full ray tracing on tri mesh") {
 
 TEST_CASE("Full ray tracing with TLAS") {
     using namespace RayTracer;
-    auto delta = 8.f;
+    auto delta = 0.f;
     Eigen::Affine3f worldFromCamera =
-        lookAt_cameraFromWorld(Eigen::Vector3f(delta, delta, std::sqrt(144.f - delta * delta - delta * delta) - 6),
-                               Eigen::Vector3f(0.f, 0.f, -6.f), Eigen::Vector3f(0.f, 0.f, 1.f))
+        lookAt_cameraFromWorld(Eigen::Vector3f(delta, delta, 6),
+                               Eigen::Vector3f(0.f, 0.f, -6.f), Eigen::Vector3f(0.f, 1.f, 0.f))
             .inverse();
 
     auto screenShape = Eigen::Vector2i(10'000, 10'000);

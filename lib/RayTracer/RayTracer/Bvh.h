@@ -6,7 +6,7 @@
 #include <Eigen/Geometry>
 #include <RayTracer/Common.h>
 #include <RayTracer/Material.h>
-#pragma GCC optimize ("O0")
+
 namespace VdbFields::RayTracer{
 struct BVHRay {
     struct Hit{
@@ -95,9 +95,9 @@ struct BVHNode {
         return bounds.contains(pt);
     }
 
-    [[nodiscard]] bool isValidNode() const { return triCount > 0 || leftFirst > 0; }
+    [[nodiscard]] inline bool isValidNode() const { return triCount > 0 || leftFirst > 0; }
 
-    [[nodiscard]] bool isLeaf() const { return triCount > 0; }
+    [[nodiscard]] inline bool isLeaf() const { return triCount > 0; }
 };
 
 class BVH {

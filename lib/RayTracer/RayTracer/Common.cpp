@@ -42,21 +42,13 @@ AABB operator*(const Eigen::Affine3f& transform, const AABB& aabb) {
 float VdbFields::intersectAABB(const Eigen::Vector3f& origin, const Eigen::Vector3f& invDir,
                                float t, const Eigen::Vector3f& aabbMin,
                                const Eigen::Vector3f& aabbMax) {
-    float tx1 = (aabbMin.x() - origin.x()) * invDir.x();
-    float tx2 = (aabbMax.x() - origin.x()) * invDir.x();
-    float tmin = std::min(tx1, tx2);
-    float tmax = std::max(tx1, tx2);
-
-    float ty1 = (aabbMin.y() - origin.y()) * invDir.y();
-    float ty2 = (aabbMax.y() - origin.y()) * invDir.y();
-    tmin = std::max(tmin, std::min(ty1, ty2));
-    tmax = std::min(tmax, std::max(ty1, ty2));
-
-    float tz1 = (aabbMin.z() - origin.z()) * invDir.z();
-    float tz2 = (aabbMax.z() - origin.z()) * invDir.z();
-
-    tmin = std::max(tmin, std::min(tz1, tz2));
-    tmax = std::min(tmax, std::max(tz1, tz2));
+    // Leverage Eigen's SIMD
+    auto originToMin = (aabbMin - origin).cwiseProduct(invDir);
+    auto originToMax = (aabbMax - origin).cwiseProduct(invDir);
+    auto mins = originToMin.cwiseMin(originToMax);
+    auto maxs = originToMin.cwiseMax(originToMax);
+    float tmin = mins.maxCoeff(); 
+    float tmax = maxs.minCoeff(); 
 
     return (tmax >= tmin && tmin < t && tmax > 0) ? tmin : std::numeric_limits<float>::infinity();
 }
@@ -66,7 +58,7 @@ float VdbFields::intersectAABB(const Eigen::Vector3f& origin, const Eigen::Vecto
     const Eigen::Vector3f& v1, const Eigen::Vector3f& v2) {
     Eigen::Vector3f e1 = v1 - v0;
     Eigen::Vector3f e2 = v2 - v0;
-    
+
     Eigen::Vector3f h = direction.cross(e2);
     float a = e1.dot(h);
 

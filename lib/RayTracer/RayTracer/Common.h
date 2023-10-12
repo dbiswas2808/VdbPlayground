@@ -35,7 +35,7 @@ struct AABB {
                                   const Eigen::Vector3f& aabbMax);
 
 [[nodiscard]] inline Eigen::Matrix3f txInvTranspose(const Eigen::Affine3f& transform) {
-    return transform.rotation().transpose().inverse();
+    return transform.linear().transpose().inverse();
 }
 
 [[nodiscard]] TriIntersectData intersectTriangle(const Eigen::Vector3f& origin,

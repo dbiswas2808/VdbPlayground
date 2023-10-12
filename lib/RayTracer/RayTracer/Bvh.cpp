@@ -1,5 +1,5 @@
 #include <RayTracer/Bvh.h>
-#pragma GCC optimize ("O0")
+
 namespace VdbFields {
 namespace RayTracer {
 namespace {
@@ -36,7 +36,7 @@ namespace RayTracer {
 BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
     auto result = BVHRay {
         .origin =transform * this->origin,
-        .direction = transform.rotation() * this->direction,
+        .direction = transform.linear() * this->direction,
         .invDirection = Eigen::Vector3f(),
         .hit = this->hit
     };

@@ -1,6 +1,6 @@
 #include <RayTracer/Bvh.h>
 #include <catch2/catch_test_macros.hpp>
-#pragma GCC optimize ("O0")
+
 namespace VdbFields {
 TEST_CASE("BVH") {
     using namespace RayTracer;

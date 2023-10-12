@@ -58,7 +58,7 @@ TEST_CASE("Test lookAt") {
 
     auto vec_camera = Eigen::Vector3f(0.f, 0.f, -1.f);
 
-    Eigen::Vector3f vec_world = worldFromCamera.rotation() * vec_camera;
+    Eigen::Vector3f vec_world = worldFromCamera.linear() * vec_camera;
     CHECK((vec_world - Eigen::Vector3f(1.f, 0.f, -1.f).normalized()).norm() < epsilon_mm<float>);
 
     auto pt_camera = Eigen::Vector3f(0.f, 0.f, 0.f);
