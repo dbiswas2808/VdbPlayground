@@ -37,3 +37,4 @@ Currently Implements:
 ![Mesh_and_implicit_surface_test_camera_angle](./images/TLAS_pyramid_spheres_test_5.png)
 
 ![TLAS_tank](./images/TLAS_tank.png)
+The weird shading comes from the OBJ file normals
