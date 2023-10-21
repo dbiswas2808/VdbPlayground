@@ -104,6 +104,9 @@ void writePngRGB(Eigen::MatrixXf denseImage, std::string filename) {
 }
 }  // namespace
 
+Film::Film(const Eigen::Vector2i& shape_px)
+    : m_shape_px(shape_px), m_image(Eigen::MatrixXf::Zero(m_shape_px[1], 3 * m_shape_px[0])) {}
+
 void Film::addSample(Eigen::Vector2i pixel, Eigen::Vector3f color) {
     if (color != Eigen::Vector3f::Zero()) {
         m_image.coeffRef(pixel[1], 3 * pixel[0]) += color[0];

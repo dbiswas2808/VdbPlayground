@@ -4,8 +4,7 @@
 namespace VdbFields::RayTracer {
 class Film {
    public:
-    explicit Film(Eigen::Vector2i shape_px)
-        : m_shape_px(shape_px), m_image(Eigen::MatrixXf::Zero(m_shape_px[1], 3 * m_shape_px[0])) {}
+    explicit Film(const Eigen::Vector2i& shape_px);
     [[nodiscard]] Eigen::Vector2i getShape_px() const { return m_shape_px; }
 
     void addSample(Eigen::Vector2i pixel, Eigen::Vector3f color);

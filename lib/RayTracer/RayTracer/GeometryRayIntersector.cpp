@@ -1,7 +1,6 @@
 #include <RayTracer/GeometryRayIntersector.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#pragma GCC optimize ("O0")
 
 namespace VdbFields::RayTracer {
 namespace {
@@ -123,7 +122,7 @@ std::optional<RayIntersect> AggregateMeshIntersector::intersect(const Ray& ray_w
     m_tlas->intersect(bvhRay_world);
     if (bvhRay_world.hasIntersection()) {
         const auto intersectionPt_world = bvhRay_world.getIntersect();
-        const auto normal_world = m_tlas->getNormal(bvhRay_world.hit);
+        auto normal_world = m_tlas->getNormal(bvhRay_world.hit);
         const auto texCoord = m_tlas->getTexCoord(bvhRay_world.hit);
         const auto material = m_tlas->getMaterial(bvhRay_world.hit);
 
@@ -140,7 +139,7 @@ std::optional<RayIntersect> AggregateMeshIntersector::intersect(const Ray& ray_w
      return intersect(ray_world).has_value();
  }
 
- void AggregateMeshIntersector::addMeshIntersector(cow<BVHMesh> mesh,
+void AggregateMeshIntersector::addMeshIntersector(cow<BVHMesh> mesh,
                                                    const Eigen::Affine3f& worldFromGeom) {
      m_bvhInstance.push_back({std::move(mesh), worldFromGeom});
  }

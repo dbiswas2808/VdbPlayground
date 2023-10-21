@@ -36,7 +36,7 @@ namespace RayTracer {
 BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
     auto result = BVHRay {
         .origin =transform * this->origin,
-        .direction = transform.linear() * this->direction,
+        .direction = (transform.linear() * this->direction).normalized(),
         .invDirection = Eigen::Vector3f(),
         .hit = this->hit
     };

@@ -3,7 +3,7 @@
 namespace VdbFields::RayTracer {
 Ray Ray::transform(const Eigen::Affine3f& tx) const {
     return Ray{.origin = (tx * origin),
-               .direction = (tx.linear() * direction),
+               .direction = (tx.linear() * direction).normalized(),
                .m_minMaxT = m_minMaxT};
 }
 }  // namespace VdbFields::RayTracer

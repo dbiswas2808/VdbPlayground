@@ -4,6 +4,8 @@
 #include <mutex>
 #include <catch2/catch_test_macros.hpp>
 
+#include <MeshFileReaders/StlFileReader.h>
+
 namespace VdbFields {
 namespace {
 struct UniformRandomSampler {
@@ -226,9 +228,8 @@ TEST_CASE("Full ray tracing on tri mesh") {
 
 TEST_CASE("Full ray tracing with TLAS") {
     using namespace RayTracer;
-    auto delta = 0.f;
     Eigen::Affine3f worldFromCamera =
-        lookAt_cameraFromWorld(Eigen::Vector3f(delta, delta, 6),
+        lookAt_cameraFromWorld(Eigen::Vector3f(0., 0., 6.),
                                Eigen::Vector3f(0.f, 0.f, -6.f), Eigen::Vector3f(0.f, 1.f, 0.f))
             .inverse();
 
@@ -371,4 +372,149 @@ TEST_CASE("Full ray tracing with TLAS") {
         "/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/"
         "TLAS_pyramid_spheres_test.png");
 }
+
+TEST_CASE("Full ray tracing On mesh") {
+    using namespace RayTracer;
+    auto delta = 4.f;
+    Eigen::Affine3f worldFromCamera =
+        lookAt_cameraFromWorld(Eigen::Vector3f(0., 3, 1.),
+                               Eigen::Vector3f(0.f, 0.f, -6.f), Eigen::Vector3f(0.f, 1.f, 0.f))
+            .inverse();
+
+    auto screenShape = Eigen::Vector2i(10'000, 10'000);
+    auto camera = Camera(Eigen::Vector3f(0.f, 0.f, 0.f), screenShape, 90.f,
+                         Eigen::Vector2f(0, std::numeric_limits<float>::infinity()));
+
+    auto lightDir1 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(-1.f, 1.f, 0.f).normalized(), 10.f);
+    auto lightDir2 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(1.f, -1.f, 1.f).normalized(), 10.f);
+    auto lightDir5 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(-1.f, -1.f, 1.f).normalized(), 10.f);
+    auto lightDir4 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(1.f, -1.f, -1.f).normalized(), 10.f);
+    auto lightDir3 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(0.f, 0.f, -1.f).normalized(), 10.f);
+    auto lightDir6 =
+        Light::fromImpl<DirectionalLight>(Eigen::Vector3f(0.f, -1.f, -1.f).normalized(), 10.f);
+    auto lightPoint1 =
+        Light::fromImpl<PointLight>(Eigen::Vector3f(-0.f, 0.f, 0.f).normalized(), 10.f);
+    auto lightPoint2 =
+        Light::fromImpl<PointLight>(Eigen::Vector3f(5.f, 5.f, -2.f).normalized(), 10.f);
+
+    std::vector<Light> lights{lightDir3, lightDir2, lightDir1, lightPoint1,
+                              lightDir4, lightDir5, lightDir6, lightPoint2};
+
+    auto meshes = MeshFileReaders::readObjFile(
+        "/home/dbiswas2808/Documents/Projects/VdbPlayground/lib/RayTracer/test_model/705A.obj");
+
+    auto eigenFromArray = [](auto arr) {
+        return Eigen::Vector3f(arr[0], arr[1], arr[2]);
+    };
+    std::vector<Eigen::Vector3f> tris;
+    std::vector<Eigen::Vector3f> normals;
+
+    AABB aabb;
+    for (const auto& mesh : meshes) {
+        for (auto f : mesh.faces) {
+            auto [idx0, idx1, idx2] = f;
+            tris.push_back(eigenFromArray(mesh.vertices[idx0]));
+            aabb.extend(tris.back());
+            normals.push_back(eigenFromArray(mesh.normals[idx0]));
+
+            tris.push_back(eigenFromArray(mesh.vertices[idx1]));
+            aabb.extend(tris.back());
+            normals.push_back(eigenFromArray(mesh.normals[idx1]));
+
+            tris.push_back(eigenFromArray(mesh.vertices[idx2]));
+            aabb.extend(tris.back());
+            normals.push_back(eigenFromArray(mesh.normals[idx2]));
+        }
+    }
+
+    BRDF material1 = {
+        .diffuse = Eigen::Vector3f(10, 3.8, 8.8),   // Diffuse reflectance (kd)
+        .specular = Eigen::Vector3f(0.5, 0.1, 0.5),  // Specular reflectance (ks)
+        .ambient = Eigen::Vector3f(0.2, 0.2, 0.1),   // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(3.0, 1.0, 8.0),  // Emission (glow)
+        .reflectivity = 0.2f,
+        .shininess = 30                              // Shininess (n)
+    };
+
+    BRDF material2 = {
+        .diffuse = Eigen::Vector3f(2.8, 3, 10.8),    // Diffuse reflectance (kd)
+        .specular = Eigen::Vector3f(9.1, 0.5, 0.5),  // Specular reflectance (ks)
+        .ambient = Eigen::Vector3f(0.1, 0.2, 0.2),   // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(4.0, 5.0, 7.0),  // Emission (glow)
+        .reflectivity = 0.2f,
+        .shininess = 30  // Shininess (n)
+    };
+
+    BRDF material3 = {
+        .diffuse = Eigen::Vector3f(1, 10.6, 6.9),     // Diffuse reflectance (kd)
+        .specular = Eigen::Vector3f(0.5, 0.6, 11.9),  // Specular reflectance (ks)
+        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),    // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(4.0, 8.0, 4.0),   // Emission (glow)
+        .reflectivity = 0.2f,
+        .shininess = 30  // Shininess (n)
+    };
+
+    BRDF material4 = {
+        .diffuse = Eigen::Vector3f(10, 10.6, 6.9),   // Diffuse reflectance (kd)
+        .specular = Eigen::Vector3f(0.5, 0.6, 0.9),  // Specular reflectance (ks)
+        .ambient = Eigen::Vector3f(0.8, 0.5, 0.6),   // Ambient reflectance (ka)
+        .emission = Eigen::Vector3f(10.0, 4.8, 0.9),  // Emission (glow)
+        .reflectivity = 0.2f,
+        .shininess = 35                              // Shininess (n)
+    };
+
+    AggregateMeshIntersector aggMeshIntersector;
+    aggMeshIntersector.addMeshIntersector(
+        BVHMesh::makeMesh(tris, normals, makeTestTexCoords(tris), Material{material1}),
+        Eigen::Affine3f(Eigen::Translation3f(-2.3f, 0.f, -9.f)));
+    aggMeshIntersector.addMeshIntersector(
+        BVHMesh::makeMesh(tris, normals, makeTestTexCoords(tris), Material{material2}),
+        Eigen::Affine3f(Eigen::Translation3f(-2.3f, -5.f, -9.f)));
+    aggMeshIntersector.addMeshIntersector(
+        BVHMesh::makeMesh(tris, normals, makeTestTexCoords(tris), Material{material3}),
+        Eigen::Affine3f(Eigen::Translation3f(2.3f, -5.f, -9.f)));
+    aggMeshIntersector.addMeshIntersector(
+        BVHMesh::makeMesh(tris, normals, makeTestTexCoords(tris), Material{material4}),
+        Eigen::Affine3f(Eigen::Translation3f(2.3f, 0.f, -9.f)));
+
+    aggMeshIntersector.buildTlas();
+
+    auto multiMeshIntersector =
+        ShapeIntersector::fromImpl<AggregateMeshIntersector>(std::move(aggMeshIntersector));
+
+    auto scene = Scene<Sampler<UniformRandomSampler>>(
+        screenShape, camera, std::vector{multiMeshIntersector}, std::move(lights), worldFromCamera,
+        Eigen::Vector2i(250, 250));
+
+    std::atomic<int> atomicProgress;
+    std::mutex m;
+    auto t_start = std::chrono::high_resolution_clock::now();
+    scene.rayTrace(
+        [&atomicProgress, &m](int num, int den) {
+            atomicProgress++;
+            if (auto val = atomicProgress.load(); val % 40'000 == 0) {
+                std::scoped_lock lock(m);
+                std::cout << "progress: " << static_cast<float>(val) / den << std::endl;
+            }
+        },
+        16);
+
+        
+
+    auto t_end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Elapsed time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count()
+              << " ms\n";
+
+    scene.writRayTracedImageToFile(
+        "/home/dbiswas2808/Documents/Projects/VdbPlayground/rt_test_images/"
+        "TLAS_tank.png");
+}
+
 }  // namespace VdbFields

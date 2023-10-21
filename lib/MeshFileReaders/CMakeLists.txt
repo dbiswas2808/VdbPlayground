@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.12.0)
+add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
 add_library(MeshFileReaders
 MeshFileReaders/StlFileReader.h

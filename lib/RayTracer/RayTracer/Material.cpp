@@ -1,29 +1,6 @@
 #include <RayTracer/Material.h>
 
 namespace VdbFields {
-// RayTracer::BRDF::Color RayTracer::phong_shading(const Eigen::Vector3f& lightDir,
-//                                                 const Eigen::Vector3f& viewDir,
-//                                                 const Eigen::Vector3f& surfaceNormal, BRDF brdf) {
-//     BRDF::Color result;
-
-//     // Calculate ambient component
-//     result += brdf.ambient;
-
-//     // Calculate diffuse component
-//     float diffuseIntensity = std::max(0.0f, surfaceNormal.dot(lightDir));
-//     result += diffuseIntensity * brdf.diffuse;
-
-//     // Calculate specular component
-//     Eigen::Vector3f reflection = 2 * lightDir.dot(surfaceNormal) * surfaceNormal - lightDir;
-//     float specularIntensity =
-//         std::pow(std::max(0.0f, reflection.dot(viewDir)),
-//                  16);  // You can adjust the shininess (16) to control the specular highlight size
-//     result += specularIntensity * brdf.specular;
-//     result += brdf.emission;
-
-//     return result;
-// }
-
 namespace {
 Eigen::Vector3f reflect(const Eigen::Vector3f& v, const Eigen::Vector3f& n) {
     return v - 2 * v.dot(n) * n;

@@ -3,7 +3,6 @@ find_package(PNG REQUIRED)
 # ...
 find_package(TBB REQUIRED)
 find_package(stlab REQUIRED)
-
 include_directories(${PNG_INCLUDE_DIRS})
 
 add_library(RayTracer
@@ -43,6 +42,7 @@ target_link_libraries(
     ${PNG_LIBRARIES}
     TBB::tbb
     stlab::stlab
+    MeshFileReaders
 )
 
 message(STATUS "PNG_INCLUDE_DIRS: ${PNG_INCLUDE_DIRS}")
@@ -71,5 +71,7 @@ target_link_libraries(
     RayTracerTest 
     PUBLIC 
     Catch2::Catch2WithMain 
-    RayTracer)
+    RayTracer
+    MeshFileReaders
+    )
 

@@ -56,8 +56,6 @@ struct BVHRay {
 [[nodiscard]] float intersectAABB(const BVHRay& rayOrigin, const Eigen::Vector3f& aabbMin,
                                   const Eigen::Vector3f& aabbMax);
 
-class BVH;
-
 struct BVHMesh {
     struct Triangle {
         std::array<Eigen::Vector3f, 3> vs;
@@ -156,7 +154,7 @@ class BVHInstance {
         auto normal_geom = ((1 - uv.x() - uv.y()) * vNormals_geom[0] + uv.x() * vNormals_geom[1] +
                             uv.y() * vNormals_geom[2])
                                .normalized();
-        return (txInvTranspose(m_worldFromGeom) * normal_geom).eval();
+        return (txInvTranspose(m_worldFromGeom) * normal_geom).eval().normalized();
     }
 
     [[nodiscard]] Eigen::Vector2f getTexCoord(int triIdx, const Eigen::Vector2f& uv) const { 
