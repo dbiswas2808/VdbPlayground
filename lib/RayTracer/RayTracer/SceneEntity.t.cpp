@@ -14,7 +14,7 @@ class InfiniteXYPlaneIntersector {
 
     [[nodiscard]] virtual std::optional<RayTracer::RayIntersect> intersect(
         const RayTracer::Ray& ray_world) const final {
-        assert(ray.direction_world.z() > epsilon_mm<float>);
+        assert(ray_world.direction.z() > epsilon_mm<float>);
         auto hitT = (m_zoffset_mm - ray_world.origin.z()) / ray_world.direction.z();
         const auto intersectionPt_world = (ray_world.origin + hitT * ray_world.direction).eval();
         return RayTracer::RayIntersect{intersectionPt_world, hitT};

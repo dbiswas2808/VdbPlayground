@@ -52,7 +52,7 @@ BVHRay BVHRay::transform(const Eigen::Affine3f& transform) const {
                                      std::span<const Eigen::Vector2f> texUvs, Material material) {
     assert(triangleSoup.size() % 3 == 0);
     assert(normals.size() == triangleSoup.size());
-    assert(texUv.size() == triangleSoup.size());
+    assert(texUvs.size() == triangleSoup.size());
 
     std::vector<Triangle> result;
     std::vector<TriEx> triData;
@@ -358,7 +358,7 @@ void TLAS::intersect(BVHRay& ray_world) const {
             if (tempT > ray_world.hit.t) {
                 ray_world.hit.setBvhInstIdx(node.bvhIdx);
             }
-            assert(tempT >= ray_world.t);
+            assert(tempT >= ray_world.hit.t);
             continue;
         }
 

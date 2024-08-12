@@ -1,6 +1,7 @@
 #include <RayTracer/GeometryRayIntersector.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <RayTracer/Ray.h>
 
 namespace VdbFields::RayTracer {
 namespace {
@@ -41,7 +42,7 @@ bool SphereIntersector::hasIntersection(const Ray& ray_world) const {
     Eigen::Vector3f center_world = (m_worldFromGeom * m_sphere.center);
     const auto radiusSq_world = (m_sphere.radius_mm * m_sphere.radius_mm);
 
-    assert(ray.direction_world.stableNorm() - 1.0 < 1e-6);
+    assert(ray_world.direction.stableNorm() - 1.0 < 1e-6);
     const auto rayOriginToSphereCenter_world = (center_world - ray_world.origin).eval();
     const auto proj_world = rayOriginToSphereCenter_world.dot(ray_world.direction);
 
@@ -70,7 +71,7 @@ std::optional<RayIntersect> SphereIntersector::intersect(const Ray& ray_world) c
     Eigen::Vector3f center_world = (m_worldFromGeom * m_sphere.center);
     const auto radiusSq_world = (m_sphere.radius_mm * m_sphere.radius_mm);
 
-    assert(ray.direction_world.stableNorm() - 1.0 < epsilon_mm<float>);
+    assert(ray_world.direction.stableNorm() - 1.0 < epsilon_mm<float>);
     const auto rayOriginToSphereCenter_world = (center_world - ray_world.origin);
     const auto proj_world = rayOriginToSphereCenter_world.dot(ray_world.direction);
 

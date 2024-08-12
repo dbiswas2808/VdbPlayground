@@ -1,11 +1,12 @@
 cmake_minimum_required ( VERSION 3.12.0 )
 project ( VDBFields VERSION 0.1.0 )
 
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+
 include ( CTest )
 enable_testing ()
 
 # Include Conan
-include ( cmake/modules/SetupConan.cmake )
 
 # Enable ccache for caching compilation results
 find_program ( CCACHE_FOUND ccache )
@@ -23,6 +24,9 @@ endif ( VF_ASAN )
 find_package ( Eigen3 REQUIRED )
 find_package ( assimp REQUIRED )
 find_package(TBB REQUIRED)
+find_package(Boost REQUIRED)
+find_package(Catch2 REQUIRED)
+
 
 # Define main target app VDBFields
 add_executable ( VDBFields main.cpp )

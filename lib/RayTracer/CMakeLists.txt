@@ -30,10 +30,7 @@ RayTracer/Scene.cpp
 RayTracer/SceneEntity.cpp
 )
 
-set_target_properties ( RayTracer PROPERTIES LINKER_LANGUAGE CXX )
 set_property ( TARGET RayTracer PROPERTY CXX_STANDARD 20 )
-set_property ( TARGET RayTracer PROPERTY CXX_STANDARD_REQUIRED ON )
-
 # Link the eigen library to your executable
 target_link_libraries(
     RayTracer
@@ -47,9 +44,7 @@ target_link_libraries(
 
 message(STATUS "PNG_INCLUDE_DIRS: ${PNG_INCLUDE_DIRS}")
 
-add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
-
-find_package(Catch2 3 REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
 
 target_include_directories(RayTracer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
 
@@ -63,15 +58,13 @@ add_executable(RayTracerTest
     RayTracer/Scene.t.cpp
     RayTracer/SceneEntity.t.cpp
 )
-set_target_properties(RayTracerTest PROPERTIES LINKER_LANGUAGE CXX)
-set_property(TARGET RayTracerTest PROPERTY CXX_STANDARD 20)
-set_property(TARGET RayTracerTest PROPERTY CXX_STANDARD_REQUIRED ON)
 
+set_property(TARGET RayTracerTest PROPERTY CXX_STANDARD 20)
 target_link_libraries(
     RayTracerTest 
     PUBLIC 
     Catch2::Catch2WithMain 
     RayTracer
     MeshFileReaders
-    )
+)
 

@@ -1,15 +1,11 @@
 cmake_minimum_required(VERSION 3.12.0)
-add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
 add_library(MeshFileReaders
 MeshFileReaders/StlFileReader.h
 MeshFileReaders/StlFileReader.cpp
 )
 
-set_target_properties ( MeshFileReaders PROPERTIES LINKER_LANGUAGE CXX )
 set_property ( TARGET MeshFileReaders PROPERTY CXX_STANDARD 20 )
-set_property ( TARGET MeshFileReaders PROPERTY CXX_STANDARD_REQUIRED ON )
-
 target_link_libraries(MeshFileReaders
 PRIVATE
 assimp::assimp

@@ -4,12 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/**",
-                "~/.conan/data/**"
+                "${workspaceFolder}/build/vcpkg_installed/x64-linux/include"
             ],
             "defines": [],
-            "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "compilerPath": "/usr/bin/gcc-12"
         }
     ],
     "version": 4

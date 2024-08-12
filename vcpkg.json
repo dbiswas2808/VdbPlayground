@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    "eigen3",
+    "boost",
+    "jemalloc",
+    "assimp",
+    "catch2",
+    "stlab",
+    "libpng",
+    "tbb"
+  ]
+}

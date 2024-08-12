@@ -1,5 +1,5 @@
 #include <RayTracer/Bvh.h>
-#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace VdbFields {
 TEST_CASE("BVH") {
