@@ -4,10 +4,11 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/build/vcpkg_installed/x64-linux/include"
+                "${workspaceFolder}/build/vcpkg_installed/x64-linux/include",
+                "${workspaceFolder}/**"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/gcc-12"
+            "compilerPath": "/usr/bin/gcc"
         }
     ],
     "version": 4

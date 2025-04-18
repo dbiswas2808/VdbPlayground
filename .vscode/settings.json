@@ -79,6 +79,18 @@
         "span": "cpp",
         "regex": "cpp",
         "valarray": "cpp",
-        "strstream": "cpp"
-    }
+        "strstream": "cpp",
+        "any": "cpp",
+        "csetjmp": "cpp",
+        "csignal": "cpp",
+        "charconv": "cpp",
+        "coroutine": "cpp",
+        "forward_list": "cpp",
+        "shared_mutex": "cpp",
+        "format": "cpp",
+        "stdfloat": "cpp",
+        "cassert": "cpp"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+    "editor.fontSize": 14
 }

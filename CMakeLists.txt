@@ -31,12 +31,8 @@ find_package(Catch2 REQUIRED)
 # Define main target app VDBFields
 add_executable ( VDBFields main.cpp )
 
-set ( LINKER_LANG CXX )
-set ( CMAKE_PROJECT_VDBFields_LINKER_LANG CXX )
-
 # cpp CXX standard
 set_property ( TARGET VDBFields PROPERTY CXX_STANDARD 20 )
-set_property ( TARGET VDBFields PROPERTY CXX_STANDARD_REQUIRED ON )
 
 # Link submodules and other third party libs
 target_link_libraries ( VDBFields

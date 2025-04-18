@@ -10,8 +10,6 @@ set ( CMAKE_PROJECT_SkeletonGenerators_LINKER_LANG CXX )
 
 # cpp CXX standard
 set_property ( TARGET SkeletonGenerators PROPERTY CXX_STANDARD 20 )
-set_property ( TARGET SkeletonGenerators PROPERTY CXX_STANDARD_REQUIRED ON )
-
 set_target_properties ( SkeletonGenerators PROPERTIES LINKER_LANGUAGE CXX )
 target_link_libraries ( SkeletonGenerators
     PRIVATE
